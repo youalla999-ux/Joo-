@@ -1,0 +1,59 @@
+/* ==========================================================================
+   Joo Store — design tokens
+   Identity: grocery-aisle price tag. Deep Joo green for structure, signal
+   red-orange reserved for prices/deals, paper-white surfaces, flat + bordered.
+   ========================================================================== */
+:root {
+  /* colour */
+  --ink: #12201a;
+  --ink-2: #3d4b43;
+  --muted: #6b7a71;
+  --ground: #f2f4ef;        /* page background */
+  --paper: #ffffff;         /* card / input surface */
+  --tint: #e8eee6;          /* image well, hover wash */
+  --line: #dde4da;
+  --line-strong: #c5cfc1;
+  --brand: #0d6a42;         /* Joo green */
+  --brand-2: #0a5535;
+  --brand-deep: #0a2e1f;    /* footer, dark surfaces */
+  --brand-wash: #e3f2e9;
+  --tag: #e5421d;           /* price / deal accent */
+  --tag-wash: #fde9e3;
+  --sun: #ffc94a;           /* deal ticket stub */
+  --sun-ink: #4a3300;
+  --ok: #0d6a42;
+  --danger: #c0392b;
+  --danger-wash: #fbe6e3;
+  --info: #1f4f99;
+  --info-wash: #e1ebfb;
+
+  /* shape */
+  --r-sm: 8px;
+  --r: 12px;
+  --r-lg: 18px;
+  --shadow-1: 0 1px 2px rgba(18, 32, 26, .06);
+  --shadow-2: 0 10px 30px -12px rgba(18, 32, 26, .28);
+  --ease: cubic-bezier(.2, .8, .2, 1);
+
+  /* type */
+  --font: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-display: "Baloo Bhaijaan 2", "IBM Plex Sans Arabic", system-ui, sans-serif;
+
+  /* layout */
+  --wrap: 1240px;
+  --header-h: 64px;
+
+  /* legacy aliases (admin dashboard + inline styles still reference these) */
+  --cream: var(--ground);
+  --forest: var(--brand);
+  --forest-2: var(--brand-2);
+  --green: var(--brand);
+  --green-2: #9fd3b6;
+  --green-3: var(--brand-wash);
+  --green-dark: var(--brand-2);
+  --peach: var(--tag-wash);
+  --peach-2: var(--tag);
+  --radius: var(--r-lg);
+  --shadow: var(--shadow-2);
+  font-family: var(--font);
+}
