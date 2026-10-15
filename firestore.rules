@@ -1,0 +1,216 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function isOwner() {
+      return isAdmin() &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'owner';
+    }
+    function str(v, mn, mx) {
+      return v is string && v.size() >= mn && v.size() <= mx;
+    }
+    function num(v, mn, mx) {
+      return v is number && v >= mn && v <= mx;
+    }
+    function optNum(v, mn, mx) {
+      return v == null || num(v, mn, mx);
+    }
+    function can(p) {
+      return isOwner() || (isAdmin() && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.get('perms', {}).get(p, false) == true);
+    }
+    function validPerms(m) {
+      return m is map && m.keys().hasOnly(['orders', 'products', 'coupons', 'reviews', 'support', 'settings'])
+        && m.get('orders', false) is bool && m.get('products', false) is bool && m.get('coupons', false) is bool
+        && m.get('reviews', false) is bool && m.get('support', false) is bool && m.get('settings', false) is bool;
+    }
+    function onlyChanged(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+    function statusOk(s) {
+      return s in ['new', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+    }
+
+    match /products/{id} {
+      allow read: if true;
+      allow create: if can('products') && validProduct(request.resource.data)
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if (
+        (can('reviews') && onlyChanged(['ratingSum', 'ratingCount'])
+          && request.resource.data.ratingCount is int && request.resource.data.ratingCount >= 0
+          && request.resource.data.ratingSum is number && request.resource.data.ratingSum >= 0)
+        || (can('products') && validProduct(request.resource.data) && request.resource.data.updatedAt == request.time
+            && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)));
+      allow delete: if can('products');
+    }
+    function validProduct(d) {
+      return d.keys().hasOnly(['name', 'description', 'specs', 'video', 'buyQty', 'payQty', 'category', 'price', 'oldPrice', 'stock', 'images', 'active', 'featured', 'ratingSum', 'ratingCount', 'createdAt', 'updatedAt'])
+        && str(d.name, 1, 200)
+        && str(d.get('description', ''), 0, 5000)
+        && str(d.get('specs', ''), 0, 3000)
+        && str(d.get('video', ''), 0, 500)
+        && str(d.get('category', ''), 0, 60)
+        && num(d.price, 0, 10000000)
+        && optNum(d.get('oldPrice', null), 0, 10000000)
+        && optNum(d.get('stock', null), 0, 1000000)
+        && optNum(d.get('buyQty', null), 2, 100)
+        && optNum(d.get('payQty', null), 1, 100)
+        && d.images is list && d.images.size() <= 12
+        && d.active is bool
+        && d.get('featured', false) is bool;
+    }
+
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if can('settings') && id == 'store' && validSettings(request.resource.data);
+    }
+    function validSettings(d) {
+      return d.keys().hasOnly(['name', 'announcement', 'announcementCode', 'whatsapp', 'phone', 'email', 'address', 'social', 'hero', 'sections', 'categories', 'heroCards', 'heroSlides', 'deal', 'shipping', 'freeShippingOver', 'deliveryNote', 'shippingByGov', 'pay', 'instapay', 'wallet', 'returnDays', 'returnsText', 'aboutText', 'faq', 'support'])
+        && str(d.get('name', 'x'), 1, 80)
+        && str(d.get('announcement', ''), 0, 200)
+        && str(d.get('announcementCode', ''), 0, 40)
+        && num(d.get('shipping', 0), 0, 100000)
+        && num(d.get('freeShippingOver', 0), 0, 100000000)
+        && str(d.get('deliveryNote', ''), 0, 300)
+        && d.get('shippingByGov', {}) is map
+        && d.get('categories', []) is list && d.get('categories', []).size() <= 60
+        && d.get('heroCards', []) is list && d.get('heroCards', []).size() <= 2
+        && d.get('heroSlides', []) is list && d.get('heroSlides', []).size() <= 6
+        && d.get('faq', []) is list && d.get('faq', []).size() <= 60
+        && d.get('social', {}) is map && d.get('hero', {}) is map && d.get('sections', {}) is map
+        && d.get('pay', {}) is map && d.get('support', {}) is map && d.get('deal', {}) is map
+        && str(d.get('returnsText', ''), 0, 6000)
+        && str(d.get('aboutText', ''), 0, 6000)
+        && num(d.get('returnDays', 14), 0, 365);
+    }
+
+    match /coupons/{code} {
+      allow get: if true;
+      allow list: if can('coupons');
+      allow create, update: if can('coupons') && code.matches('^[A-Z0-9_-]{2,30}$') && validCoupon(request.resource.data);
+      allow delete: if can('coupons');
+    }
+    function validCoupon(d) {
+      return d.keys().hasOnly(['type', 'value', 'minOrder', 'expires', 'maxUses', 'uses', 'active', 'createdAt'])
+        && d.type in ['percent', 'fixed']
+        && num(d.value, 1, 100000)
+        && (d.type == 'fixed' || d.value <= 100)
+        && num(d.get('minOrder', 0), 0, 100000000)
+        && (d.get('expires', null) == null || str(d.expires, 10, 10))
+        && optNum(d.get('maxUses', null), 1, 10000000)
+        && num(d.get('uses', 0), 0, 10000000)
+        && d.active is bool;
+    }
+
+    match /meta/{id} {
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow create: if id == 'bootstrap'
+        && request.auth != null
+        && request.resource.data.keys().hasOnly(['uid', 'at'])
+        && request.resource.data.uid == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow update, delete: if false;
+    }
+
+    match /admins/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isOwner());
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'role', 'createdAt'])
+        && request.resource.data.role == 'owner'
+        && !exists(/databases/$(database)/documents/meta/bootstrap)
+        && existsAfter(/databases/$(database)/documents/meta/bootstrap);
+      allow create: if isOwner()
+        && request.resource.data.keys().hasOnly(['email', 'role', 'perms', 'createdAt'])
+        && request.resource.data.role == 'admin'
+        && validPerms(request.resource.data.perms)
+        && uid.size() >= 20 && uid.size() <= 40;
+      allow delete: if isOwner() && request.auth.uid != uid;
+      allow update: if isOwner() && resource.data.role == 'admin' && onlyChanged(['perms']) && validPerms(request.resource.data.perms);
+    }
+
+    // الطلبات تُنشأ وتتغير حالتها من الـ Worker فقط (Service Account يتخطى القواعد).
+    // العميل والمشرف يقرأون فقط، والحذف للمالك.
+    match /orders/{id} {
+      allow create, update: if false;
+      allow get, list: if can('orders')
+        || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow delete: if isOwner();
+    }
+
+    // بيانات التتبع العامة (بدون بيانات شخصية): قراءة بالكود فقط، والكتابة من الـ Worker.
+    match /track/{id} {
+      allow get: if id.matches('^[A-Z0-9]{10}$');
+      allow list: if can('orders');
+      allow create, update: if false;
+      allow delete: if isOwner();
+    }
+
+    match /tickets/{t} {
+      allow get, list: if can('support')
+        || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow create: if t.size() >= 16 && t.size() <= 40
+        && request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['name', 'phone', 'subject', 'orderCode', 'userId', 'status', 'lastMessage', 'lastFrom', 'unreadAdmin', 'unreadCustomer', 'createdAt', 'updatedAt'])
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && str(request.resource.data.name, 2, 80)
+        && request.resource.data.phone is string && request.resource.data.phone.matches('^01[0-9]{9}$')
+        && str(request.resource.data.subject, 0, 120)
+        && str(request.resource.data.orderCode, 0, 12)
+        && str(request.resource.data.lastMessage, 0, 200)
+        && request.resource.data.lastFrom == 'customer';
+      allow update: if can('support')
+        || (request.auth != null && resource.data.userId == request.auth.uid
+            && ((onlyChanged(['unreadCustomer']) && request.resource.data.unreadCustomer == false)
+                || (resource.data.status == 'open'
+                    && onlyChanged(['lastMessage', 'lastFrom', 'unreadAdmin', 'updatedAt'])
+                    && request.resource.data.lastFrom == 'customer'
+                    && request.resource.data.unreadAdmin == true
+                    && str(request.resource.data.lastMessage, 0, 200)
+                    && request.resource.data.updatedAt == request.time)));
+      allow delete: if can('support');
+
+      match /messages/{m} {
+        allow read: if can('support')
+          || (request.auth != null
+              && get(/databases/$(database)/documents/tickets/$(t)).data.userId == request.auth.uid);
+        allow create: if request.resource.data.keys().hasOnly(['from', 'text', 'createdAt'])
+          && str(request.resource.data.text, 1, 2000)
+          && request.resource.data.createdAt == request.time
+          && ((request.resource.data.from == 'customer'
+               && request.auth != null
+               && get(/databases/$(database)/documents/tickets/$(t)).data.userId == request.auth.uid
+               && get(/databases/$(database)/documents/tickets/$(t)).data.status == 'open')
+              || (request.resource.data.from == 'admin' && can('support')));
+        allow update: if false;
+        allow delete: if can('support');
+      }
+    }
+
+    match /reviews/{id} {
+      allow read: if resource.data.approved == true || can('reviews');
+      allow create: if request.resource.data.keys().hasOnly(['productId', 'productName', 'name', 'rating', 'text', 'approved', 'createdAt'])
+        && request.resource.data.approved == false
+        && request.resource.data.productId is string
+        && exists(/databases/$(database)/documents/products/$(request.resource.data.productId))
+        && str(request.resource.data.productName, 0, 200)
+        && str(request.resource.data.name, 2, 60)
+        && str(request.resource.data.text, 1, 1000)
+        && request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.createdAt == request.time;
+      allow update: if can('reviews') && onlyChanged(['approved']) && request.resource.data.approved is bool;
+      allow delete: if can('reviews');
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

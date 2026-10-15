@@ -1,0 +1,20 @@
+{
+  // Joo Store — one Worker serves the static site (public/) and the secure API (worker/).
+  "name": "joo-store",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-01-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    // only these paths hit the Worker first; everything else is served straight from the asset CDN
+    "run_worker_first": ["/api/*", "/product", "/product.html", "/sitemap.xml", "/robots.txt"]
+  },
+  "vars": {
+    "FIREBASE_PROJECT_ID": "joo-store-cfcad",
+    "FIREBASE_API_KEY": "AIzaSyCoMhvmbexOGrE8kDJOW8466fwMeFQHqJ0",
+    "CLOUDINARY_CLOUD": "v6sc11iq"
+  }
+  // Secrets (never commit): wrangler secret put FIREBASE_SERVICE_ACCOUNT
+  // Optional card payments: PAYMOB_API_KEY, PAYMOB_INTEGRATION_ID, PAYMOB_IFRAME_ID, PAYMOB_HMAC
+}
