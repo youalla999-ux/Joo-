@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Joo HQ</title>
+  <link rel="icon" href="assets/img/favicon.png">
+  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+  <div id="app"><p style="padding:40px;text-align:center">جاري التحميل...</p></div>
+
+  <dialog id="dlgProduct" style="width:min(640px,94vw)">
+    <div class="dlg-head"><h2 id="fTitle">منتج</h2><button class="icon-btn" data-close aria-label="إغلاق">✕</button></div>
+    <div class="dlg-body">
+      <form class="form" id="pForm">
+        <label class="f">اسم المنتج<input name="name" required></label>
+        <label class="f">الوصف<textarea name="description"></textarea></label>
+        <label class="f">المواصفات (سطر لكل خاصية، بالشكل: الاسم: القيمة)<textarea name="specs" rows="4" placeholder="الخامة: قطن 100%&#10;المقاس: L"></textarea></label>
+        <div class="row">
+          <label class="f">السعر (ج.م)<input name="price" type="number" min="0" step="0.01" required></label>
+          <label class="f">السعر قبل الخصم (اختياري)<input name="oldPrice" type="number" min="0" step="0.01"></label>
+        </div>
+        <div class="row">
+          <label class="f">القسم<input name="category" list="catList" placeholder="مثال: ملابس"></label>
+          <label class="f">الكمية المتاحة (فاضي = بلا حد)<input name="stock" type="number" min="0" step="1"></label>
+        </div>
+        <datalist id="catList"></datalist>
+        <div class="row">
+          <label class="f">عرض: اشترِ (عدد) — اختياري<input name="buyQty" type="number" min="2" step="1" placeholder="مثال: 2"></label>
+          <label class="f">وادفع (عدد)<input name="payQty" type="number" min="1" step="1" placeholder="مثال: 1"></label>
+        </div>
+        <label class="f">رابط فيديو للمنتج (mp4 مباشر، اختياري)<input name="video" type="url" placeholder="https://res.cloudinary.com/.../video.mp4" dir="ltr"></label>
+        <div>
+          <b style="font-size:.9rem">الصور</b>
+          <div class="imgs" id="imgs"></div>
+          <label class="btn btn-soft btn-sm" style="margin-top:8px">+ رفع صور<input type="file" id="file" accept="image/*" multiple hidden></label>
+          <span id="upState" style="font-size:.85rem;color:var(--muted);margin-inline-start:8px"></span>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" name="active" checked> ظاهر في المتجر</label>
+        <label style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" name="featured"> منتج مميز (يظهر في مختارات الرئيسية)</label>
+        <div class="msg err hidden" id="pErr"></div>
+        <button class="btn btn-primary" id="pSave">حفظ</button>
+      </form>
+    </div>
+  </dialog>
+
+  <script type="module" src="assets/js/admin.js"></script>
+</body>
+</html>

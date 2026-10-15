@@ -1,0 +1,14 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com https://*.googleusercontent.com https://www.google-analytics.com; media-src 'self' https://res.cloudinary.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://api.cloudinary.com https://www.google-analytics.com https://*.google-analytics.com wss://*.firebaseio.com; frame-src https://accounts.google.com https://*.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'
+/assets/*
+  Cache-Control: public, max-age=86400
+/sw.js
+  Cache-Control: no-cache
+/hq-*
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store

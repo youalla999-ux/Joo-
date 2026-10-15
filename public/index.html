@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Joo Store — Easy Shopping</title>
+  <meta name="description" content="Joo Store متجرك لكل حاجة: اطلب بسهولة، ادفع عند الاستلام، والتوصيل لكل المحافظات.">
+  <meta name="theme-color" content="#0d6a42">
+  
+  <link rel="icon" href="assets/img/favicon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/img/icon-192.png">
+  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <main>
+    <h1 class="sr">Joo Store</h1>
+    <section class="wrap trust" id="trust" aria-label="مميزات الشراء"></section>
+
+    <section class="wrap block" id="catsWrap">
+      <div class="block-head"><h2>تسوّق بالقسم</h2></div>
+      <div class="cats" id="cats"></div>
+    </section>
+
+    <section class="wrap block hidden" id="dealWrap"></section>
+    <section class="wrap block hidden" id="featWrap">
+      <div class="block-head"><h2>مختارات</h2></div>
+      <div class="grid" id="featured"></div>
+    </section>
+
+    <div id="catSections"></div>
+
+    <section class="wrap block hidden" id="topWrap">
+      <div class="block-head"><h2>الأعلى تقييمًا</h2></div>
+      <div class="grid" id="top"></div>
+    </section>
+
+    <section class="wrap block" id="latestWrap">
+      <div class="block-head"><h2>وصل جديد</h2><a class="more-link" href="shop.html">كل المنتجات ←</a></div>
+      <div class="grid" id="latest"></div>
+    </section>
+    <section class="wrap block hidden" id="revWrap">
+      <div class="block-head"><h2>آراء العملاء</h2></div>
+      <div class="rev-strip" id="revs"></div>
+    </section>
+  </main>
+  <footer id="site-footer"></footer>
+  <script type="module" src="assets/js/home.js"></script>
+</body>
+</html>
