@@ -39,7 +39,9 @@ export async function paymobWebhook(req, env) {
   const body = await req.json().catch(() => null);
   if (!body?.obj) throw new HttpError(400, "bad_request", "");
   const expected = await hmacHex(env.PAYMOB_HMAC, HMAC_FIELDS.map((f) => String(dig(body.obj, f) ?? "")).join(""));
-  if (expected !== given.toLowerCase()) throw new HttpError(401, "bad_signature", "");
+  const a = new TextEncoder().encode(expected), c = new TextEncoder().encode(given.toLowerCase());
+  let diff = a.length ^ c.length; for (let i = 0; i < a.length; i++) diff |= a[i] ^ (c[i] ?? 0);
+  if (diff !== 0) throw new HttpError(401, "bad_signature", "");
   const code = String(body.obj.order?.merchant_order_id || "");
   if (!/^[A-Z0-9]{10}$/.test(code) || body.type !== "TRANSACTION") return json({ ok: true, ignored: true });
   const success = body.obj.success === true && body.obj.pending !== true && body.obj.is_voided !== true && body.obj.is_refunded !== true;

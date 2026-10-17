@@ -6,6 +6,11 @@ import { paymobEnabled, startCardPayment } from "./paymob.js";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const newCode = () => Array.from(crypto.getRandomValues(new Uint8Array(10)), (n) => ALPHABET[n % ALPHABET.length]).join("");
+// a client-generated random key makes retries/double-clicks land on the same order instead of creating duplicates
+async function codeFromKey(key) {
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`joo-order:${key}`)));
+  return Array.from(h.slice(0, 10), (n) => ALPHABET[n % ALPHABET.length]).join("");
+}
 const clean = (v, max) => String(v ?? "").replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 
 function validate(b) {
@@ -26,20 +31,23 @@ function validate(b) {
   if (!customer.city) throw new HttpError(400, "bad_city", "اكتب المدينة أو المنطقة");
   if (customer.address.length < 8) throw new HttpError(400, "bad_address", "اكتب العنوان بالتفصيل");
   const coupon = String(b.coupon || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 30);
-  return { merged, customer, notes: clean(b.notes, 500), payment: ["transfer", "card"].includes(b.payment) ? b.payment : "cod", coupon };
+  const key = /^[A-Za-z0-9_-]{16,64}$/.test(String(b.key || "")) ? String(b.key) : "";
+  return { key, merged, customer, notes: clean(b.notes, 500), payment: ["transfer", "card"].includes(b.payment) ? b.payment : "cod", coupon };
 }
 
 export async function createOrder(req, env) {
-  rateLimit(req, "order", 8, 10 * 60 * 1000);
+  await rateLimit(req, env, "order", 8, 10 * 60 * 1000, "RL_ORDER");
   const input = validate(await readJson(req));
   const bearer = (req.headers.get("authorization") || "").replace(/^Bearer /i, "");
   const user = await verifyIdToken(env, bearer);
 
   for (let attempt = 0; attempt < 3; attempt++) {
-    const code = newCode();
+    const code = input.key ? await codeFromKey(input.key) : newCode();
     try {
       const result = await transact(env, async (tx) => {
         const ids = [...input.merged.keys()];
+        const prior = input.key ? (await getMany(env, [`orders/${code}`], tx))[`orders/${code}`] : null;
+        if (prior) return { code, total: prior.total, shipping: prior.shipping, discount: prior.coupon?.discount || 0, subtotal: prior.subtotal, payment: prior.payment, name: prior.customer?.name, phone: prior.customer?.phone, customer: prior.customer, duplicate: true, writesDone: true };
         const paths = [...ids.map((i) => `products/${i}`), "settings/store", ...(input.coupon ? [`coupons/${input.coupon}`] : [])];
         const docs = await getMany(env, paths, tx);
         const settings = docs["settings/store"] || {};
@@ -81,15 +89,15 @@ export async function createOrder(req, env) {
         await commit(env, writes, tx);
         return { code, total, shipping, discount, subtotal, payment: input.payment, name: input.customer.name, phone: input.customer.phone, customer: input.customer };
       });
-      const { customer, ...pub } = result;
-      if (pub.payment === "card") {
+      const { customer, writesDone, ...pub } = result;
+      if (pub.payment === "card" && !pub.duplicate) {
         try { pub.payUrl = await startCardPayment(env, { total: pub.total, customer }, code); }
         catch (e) { console.error("paymob", e); pub.payUrl = null; pub.payError = "تم تسجيل طلبك لكن تعذر فتح صفحة الدفع. تواصل معنا لإتمام الدفع."; }
       }
-      return json({ ok: true, ...pub }, 201);
+      return json({ ok: true, ...pub }, pub.duplicate ? 200 : 201);
     } catch (e) {
       if (e.status === 409 && e.code === "aborted") continue;
-      if (e.status === 502 && /already exists/i.test(e.message)) continue; // code collision, new code
+      if (e.code === "exists" && !input.key) continue; // random code collision: pick another
       throw e;
     }
   }

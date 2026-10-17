@@ -1,23 +1,16 @@
-import { HttpError, verifyIdToken } from "../lib/google-auth.js";
+import { HttpError } from "../lib/google-auth.js";
+import { requirePerm } from "../lib/auth.js";
 import { transact, getMany, commit } from "../lib/firestore.js";
 import { json, readJson } from "../lib/http.js";
 
 const STATUSES = ["new", "confirmed", "shipped", "delivered", "cancelled"];
-
-async function requirePerm(env, bearer, perm) {
-  const user = await verifyIdToken(env, bearer);
-  if (!user) throw new HttpError(401, "unauthenticated", "سجّل الدخول أولًا");
-  const a = (await getMany(env, [`admins/${user.uid}`]))[`admins/${user.uid}`];
-  if (!a || !(a.role === "owner" || a.perms?.[perm] === true)) throw new HttpError(403, "forbidden", "ليس لديك صلاحية");
-  return user;
-}
 
 // Changes an order's status, mirrors it to the public track doc, and restocks on cancel (idempotent).
 export async function setOrderStatus(req, env) {
   const body = await readJson(req);
   const code = String(body.code || ""), status = String(body.status || "");
   if (!/^[A-Z0-9]{10}$/.test(code) || !STATUSES.includes(status)) throw new HttpError(400, "bad_request", "بيانات غير صالحة");
-  await requirePerm(env, (req.headers.get("authorization") || "").replace(/^Bearer /i, ""), "orders");
+  await requirePerm(env, req, "orders");
 
   const out = await transact(env, async (tx) => {
     const o = (await getMany(env, [`orders/${code}`], tx))[`orders/${code}`];
