@@ -38,7 +38,7 @@ with sync_playwright() as p:
     print("home (mobile)")
     ctx, calls = new_ctx(b); pg = ctx.new_page(); errs = page_errors(pg)
     pg.goto(BASE + "index.html"); pg.wait_for_selector(".card", timeout=8000)
-    check("trust strip has 4 items", pg.locator("#trust > div").count() == 4)
+    check("trust strip removed, deals rail present", pg.locator("#trust").count() == 0 and pg.locator("#hot .card").count() >= 2)
     check("category rings rendered", pg.locator(".cat-tile").count() >= 4)
     check("deal ticket shows countdown", pg.locator(".dealbox .count span").count() >= 3)
     check("no hero / announcement bar", pg.locator(".hero, .announce").count() == 0)
