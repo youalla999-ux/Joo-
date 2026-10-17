@@ -1,0 +1,112 @@
+/* ===== modern retail skin (loads last, refines everything above) ===== */
+:root { --ground: #f6f7f5; --r: 14px; --r-lg: 22px; --shadow-1: 0 1px 2px rgba(16, 28, 22, .06); --shadow-2: 0 18px 40px -18px rgba(16, 28, 22, .35); --brand-grad: linear-gradient(135deg, #0b7a4b, #0d6a42 55%, #0a5535); }
+body { background: var(--ground); }
+
+/* glass header */
+header.site { background: rgba(255, 255, 255, .86); backdrop-filter: saturate(1.6) blur(14px); -webkit-backdrop-filter: saturate(1.6) blur(14px); border-bottom: 1px solid rgba(16, 28, 22, .07); }
+.search input { border-radius: 999px; border-color: transparent; background: #eceee9; padding-inline: 46px; }
+.search input:focus { background: #fff; border-color: var(--brand); }
+.cart-pill { border-radius: 999px; background: var(--brand-grad); box-shadow: 0 6px 16px -6px rgba(13, 106, 66, .65); }
+.btn-primary { background: var(--brand-grad); box-shadow: 0 6px 16px -8px rgba(13, 106, 66, .7); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn { border-radius: 999px; }
+.btn-sm { border-radius: 999px; }
+.catnav a.on { box-shadow: inset 0 -3px 0 var(--brand); }
+
+/* section heads: bold title, accent bar, pill link */
+.block { padding-top: 34px; }
+.block-head { border-bottom: 0; padding-bottom: 0; margin-bottom: 14px; align-items: center; }
+.block-head h2 { position: relative; padding-inline-start: 14px; font-size: clamp(1.25rem, 2.4vw, 1.65rem); }
+.block-head h2::before { content: ""; position: absolute; inset-inline-start: 0; top: .22em; bottom: .22em; width: 5px; border-radius: 3px; background: var(--tag); }
+.more-link { display: inline-flex; align-items: center; min-height: 34px; padding: 0 16px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); font-weight: 700; font-size: .88rem; color: var(--brand); white-space: nowrap; }
+.more-link:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+/* categories: compact avatars */
+.cats { gap: 10px; }
+.cat-tile { width: 92px; }
+.cat-tile .ring { width: 76px; height: 76px; border: 3px solid #fff; box-shadow: 0 6px 16px -8px rgba(16, 28, 22, .4); }
+.cat-tile:hover .ring { border-color: var(--brand); }
+.cat-tile span { font-size: .85rem; } .cat-tile small { display: none; }
+
+/* product cards */
+.grid { gap: 18px; }
+.card { border: 0; border-radius: var(--r-lg); box-shadow: 0 2px 10px -4px rgba(16, 28, 22, .14); }
+.card:hover { box-shadow: var(--shadow-2); border-color: transparent; }
+.card .pic { aspect-ratio: 1 / 1.08; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.card .tag { top: 10px; inset-inline-start: 10px; border-radius: 999px; padding: 4px 11px; font-size: .78rem; font-weight: 800; background: var(--tag); color: #fff; box-shadow: 0 4px 10px -4px rgba(229, 66, 29, .8); }
+.card .tag.deal { background: var(--brand-deep); }
+.card .tag.out { background: #3d4b43; }
+.card .wish { top: 10px; inset-inline-end: 10px; width: 34px; height: 34px; }
+.card .pic .add { position: absolute; z-index: 3; inset-inline-end: 10px; bottom: 10px; width: 44px; height: 44px; margin: 0; padding: 0; min-height: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--brand-grad); color: #fff; box-shadow: 0 8px 18px -6px rgba(13, 106, 66, .8); transition: transform .18s var(--ease), filter .18s; }
+.card .pic .add:hover { background: var(--brand-grad); transform: scale(1.1); filter: brightness(1.1); }
+.card .pic .add:active { transform: scale(.92); }
+.card .pic .add svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; }
+.card .pic .add[disabled] { background: #c9d1c8; box-shadow: none; }
+.card .info { gap: 3px; padding: 12px 14px 14px; }
+.card .cat { font-size: .74rem; letter-spacing: .01em; }
+.card h3 { min-height: 2.9em; font-size: .95rem; }
+.card .low { color: var(--tag); font-weight: 700; font-size: .78rem; }
+.card .price b { font-size: 1.35rem; }
+.card .price s { font-size: .82rem; }
+.card .stars { font-size: .82rem; }
+
+/* deal ticket: darker, premium */
+.dealbox { border: 0; border-radius: 26px; background: var(--brand-deep); color: #fff; box-shadow: var(--shadow-2); }
+.dealbox .deal-body small { color: var(--sun); }
+.dealbox .deal-body h3 a { color: #fff; }
+.dealbox .deal-price b { color: var(--sun); }
+.dealbox .deal-price s, .dealbox .muted { color: rgba(255, 255, 255, .65); }
+.dealbox .meter { background: rgba(255, 255, 255, .16); } .dealbox .meter i { background: var(--sun); }
+.deal-stub { border-inline-start: 2px dashed rgba(255, 255, 255, .35); }
+.deal-stub::before, .deal-stub::after { border: 0; }
+.deal-pic em { background: var(--sun); color: var(--sun-ink); }
+
+/* reviews */
+.rev { border: 0; border-radius: var(--r-lg); box-shadow: 0 2px 10px -4px rgba(16, 28, 22, .14); }
+
+/* swipe rails on phones, grid on desktop */
+@media (max-width: 820px) {
+  .grid { gap: 12px; }
+  .grid.rail { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: -16px; padding: 4px 16px 14px; scroll-padding-inline: 16px; }
+  .grid.rail::-webkit-scrollbar { display: none; }
+  .grid.rail > .card { flex: none; width: 44vw; max-width: 200px; scroll-snap-align: start; }
+  .card .pic .add { width: 40px; height: 40px; }
+  .block-head h2 { font-size: 1.2rem; }
+  .cat-tile { width: 80px; } .cat-tile .ring { width: 66px; height: 66px; }
+}
+
+/* ===== product page polish ===== */
+.crumbs { padding: 14px 0 4px; font-size: .88rem; }
+.pgrid { gap: 24px 48px; padding-top: 6px; }
+.pmain { border: 0; border-radius: 26px; box-shadow: 0 14px 40px -22px rgba(16, 28, 22, .5); }
+.pmain .tag { inset-inline-start: 16px; inset-inline-end: auto; top: 16px; border-radius: 999px; padding: 6px 16px; font-size: .95rem; }
+.thumbs { gap: 10px; padding: 2px; }
+.thumbs img, .vthumb { border-radius: 14px; width: 76px; height: 76px; }
+.pinfo { gap: 12px; padding: 4px 0; }
+.pinfo .cat { display: inline-flex; width: fit-content; padding: 4px 14px; border-radius: 999px; background: var(--brand-wash); font-size: .85rem; }
+.pinfo .cat:hover { text-decoration: none; background: #cfe8da; }
+.pinfo h1 { font-size: clamp(1.5rem, 3vw, 2.2rem); line-height: 1.35; }
+.pprice { display: flex; align-items: center; gap: 8px 14px; padding: 0; background: none; border: 0; border-radius: 0; }
+.pprice b { font-size: clamp(2rem, 4vw, 2.6rem); }
+.pprice s { font-size: 1.05rem; }
+.pprice em { font-style: normal; font-weight: 800; font-size: .85rem; padding: 4px 12px; border-radius: 999px; background: var(--tag-wash); color: var(--tag); }
+.offer { border-radius: var(--r-lg); border: 0; background: linear-gradient(135deg, var(--brand-wash), #f1f8f3); }
+.shipline { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--r); background: var(--paper); box-shadow: 0 1px 6px -3px rgba(16, 28, 22, .2); font-weight: 500; }
+.shipline::before { display: none; }
+.shipline .ico { width: 22px; height: 22px; flex: none; color: var(--brand); }
+.desc { line-height: 1.8; }
+.buyrow { gap: 10px; }
+.qty { border-radius: 999px; border: 1.5px solid var(--line-strong); background: var(--paper); }
+.qty button { width: 46px; min-height: 52px; border-radius: 999px; }
+.ptabs { border: 0; border-radius: var(--r-lg); box-shadow: 0 2px 10px -4px rgba(16, 28, 22, .14); margin-top: 8px; }
+.reviews { margin-top: 8px; }
+.reviews > h2 { position: relative; padding-inline-start: 14px; }
+.reviews > h2::before { content: ""; position: absolute; inset-inline-start: 0; top: .22em; bottom: .22em; width: 5px; border-radius: 3px; background: var(--tag); }
+.reviews .form { max-width: 640px; margin: 0; justify-self: start; width: 100%; border: 0; border-radius: var(--r-lg); box-shadow: 0 2px 10px -4px rgba(16, 28, 22, .14); background: var(--paper); }
+article.rv { border: 0; border-radius: var(--r-lg); box-shadow: 0 2px 10px -4px rgba(16, 28, 22, .14); background: var(--paper); }
+@media (max-width: 820px) {
+  .stickybuy { bottom: calc(58px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; border: 0; }
+  .pmain { border-radius: 22px; }
+  .pinfo h1 { font-size: 1.45rem; }
+  .qty button { min-height: 48px; }
+}
