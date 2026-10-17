@@ -32,7 +32,13 @@ const idOf = (name) => name.split("/").pop();
 async function call(env, url, body, method = "POST") {
   const r = await fetch(url, { method, headers: { authorization: `Bearer ${await accessToken(env)}`, "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) { const e = new HttpError(r.status === 409 ? 409 : 502, r.status === 409 ? "aborted" : "firestore_error", j.error?.message || "firestore error"); throw e; }
+  if (!r.ok) {
+    const st = j.error?.status || "";
+    if (st === "ABORTED" || (r.status === 409 && st !== "ALREADY_EXISTS")) throw new HttpError(409, "aborted", "contention");
+    if (st === "ALREADY_EXISTS") throw new HttpError(409, "exists", "already exists");
+    console.error("firestore", r.status, st, j.error?.message);
+    throw new HttpError(502, "firestore_error", "upstream error");
+  }
   return j;
 }
 
