@@ -9,7 +9,7 @@ let unsubs = [];
 const clear = () => { unsubs.forEach((f) => f()); unsubs = []; };
 export const stopSupport = clear;
 
-export function mountSupport(root, { orders = [], presetOrder = "" } = {}) {
+export function mountSupport(root, { orders = [], presetOrder = "", presetType = "" } = {}) {
   const user = S.user; if (!user) return;
   const cfg = S.settings.support || {};
   const home = () => {
@@ -18,19 +18,19 @@ export function mountSupport(root, { orders = [], presetOrder = "" } = {}) {
     root.innerHTML = `
       <p class="muted">${esc(cfg.greeting || "")}${cfg.hours ? ` <b>${esc(cfg.hours)}</b>` : ""}</p>
       <div class="tickets" id="tkList"></div>
-      <details class="newtk" ${presetOrder ? "open" : ""}><summary class="btn btn-primary">محادثة جديدة</summary>
+      <details class="newtk" ${presetOrder || presetType ? "open" : ""}><summary class="btn btn-primary">محادثة جديدة</summary>
       <form class="form panel-form" id="tkForm">
         <div class="row"><label class="f">الاسم<input name="name" required maxlength="80" value="${esc(c.name || user.displayName || "")}"></label>
         <label class="f">رقم الموبايل<input name="phone" required inputmode="tel" pattern="01[0-9]{9}" value="${esc(c.phone || "")}" dir="ltr"></label></div>
-        <label class="f">الموضوع<select name="subject">${["استفسار عن طلب", "مشكلة في منتج", "تعديل أو إلغاء طلب", "سؤال عن منتج", "شكوى أو اقتراح", "أخرى"].map((x, i) => `<option ${presetOrder && i === 0 ? "selected" : ""}>${x}</option>`).join("")}</select></label>
-        ${orders.length ? `<label class="f">الطلب (اختياري)<select name="order"><option value="">بدون</option>${orders.map((o) => `<option value="${o.id}" ${o.id === presetOrder ? "selected" : ""}>#${fmtCode(o.id)}</option>`).join("")}</select></label>` : ""}
+        <label class="f">الموضوع<select name="subject">${["استفسار عن طلب", "استبدال أو استرجاع", "مشكلة في منتج", "تعديل أو إلغاء طلب", "سؤال عن منتج", "شكوى أو اقتراح", "أخرى"].map((x) => `<option ${(presetType === "return" ? x === "استبدال أو استرجاع" : presetOrder && x === "استفسار عن طلب") ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+        ${orders.length ? `<label class="f">الطلب (اختياري)<select name="order"><option value="">بدون</option>${orders.map((o) => `<option value="${esc(o.id)}" ${o.id === presetOrder ? "selected" : ""}>#${fmtCode(o.id)}</option>`).join("")}</select></label>` : ""}
         <label class="f">رسالتك<textarea name="text" required maxlength="2000" rows="4"></textarea></label>
         <div class="msg err hidden" id="tkErr"></div>
         <button class="btn btn-primary btn-lg">ابدأ المحادثة</button>
       </form></details>`;
     unsubs.push(onSnapshot(query(collection(db, "tickets"), where("userId", "==", user.uid)), (s) => {
       const l = s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
-      $("#tkList").innerHTML = l.map((x) => `<a href="#support" class="tk" data-t="${x.id}"><b>${esc(x.subject)}${x.unreadCustomer ? ` <i class="dot">رد جديد</i>` : ""}</b><span>${esc((x.lastMessage || "").slice(0, 70))}</span><small>${x.status === "closed" ? "مغلقة · " : ""}${esc(timeText(x.updatedAt))}</small></a>`).join("") || "";
+      $("#tkList").innerHTML = l.map((x) => `<a href="#support" class="tk" data-t="${esc(x.id)}"><b>${esc(x.subject)}${x.unreadCustomer ? ` <i class="dot">رد جديد</i>` : ""}</b><span>${esc((x.lastMessage || "").slice(0, 70))}</span><small>${x.status === "closed" ? "مغلقة · " : ""}${esc(timeText(x.updatedAt))}</small></a>`).join("") || "";
     }, console.error));
     $("#tkList").onclick = (e) => { const a = e.target.closest("[data-t]"); if (a) { e.preventDefault(); thread(a.dataset.t); } };
     $("#tkForm").onsubmit = async (e) => {

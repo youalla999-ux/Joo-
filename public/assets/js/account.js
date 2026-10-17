@@ -1,12 +1,12 @@
 import { auth, db, collection, query, where, onSnapshot, doc, onSnapshot as snap, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from "./firebase.js";
 import { ORDER_STATUS, ORDER_FLOW, fmtCode, cleanCode } from "./config.js";
-import { S, start, onChange, cardHTML, bindCards, wishList } from "./core.js";
+import { S, start, onChange, cardHTML, bindCards, wishList, addToCart, findProduct } from "./core.js";
 import { mountSupport, stopSupport } from "./chat.js";
 import { $, $$, esc, money, img, toast, authError, dateText, timeText } from "./utils.js";
 
 start("account");
 const box = $("#account"); let mode = "login", drawn = null, tab = (location.hash || "#orders").slice(1), orders = [], unsubOrders = null;
-const qs = new URLSearchParams(location.search), presetCode = cleanCode(qs.get("c") || ""), presetOrder = cleanCode(qs.get("order") || "");
+const qs = new URLSearchParams(location.search), presetCode = cleanCode(qs.get("c") || ""), presetOrder = cleanCode(qs.get("order") || ""), presetType = qs.get("type") || "";
 if (presetOrder) tab = "support";
 
 onChange(() => {
@@ -22,6 +22,27 @@ function timeline(o) {
   if (o.status === "cancelled") return `<div class="msg err">تم إلغاء الطلب${hist.cancelled ? " في " + esc(timeText(hist.cancelled)) : ""}. لو ده غلط كلّم الدعم.</div>`;
   const idx = ORDER_FLOW.findIndex(([k]) => k === o.status);
   return `<ol class="timeline">${ORDER_FLOW.map(([k, t, s], i) => `<li class="${i < idx ? "done" : i === idx ? "now" : ""}"><i></i><div><b>${t}</b><span>${i <= idx ? esc(timeText(hist[k] || (i === 0 ? o.createdAt : null))) || s : s}</span></div></li>`).join("")}</ol>`;
+}
+
+/* شريط تقدّم + إجراءات الطلب */
+function progress(o) {
+  if (o.status === "cancelled") return "";
+  const idx = Math.max(0, ORDER_FLOW.findIndex(([k]) => k === o.status));
+  return `<div class="oprog" role="img" aria-label="${esc(ORDER_STATUS[o.status] || "")}">${ORDER_FLOW.map((_, i) => `<i class="${i <= idx ? "on" : ""}"></i>`).join("")}</div>`;
+}
+function returnOpen(o) {
+  if (o.status !== "delivered") return false;
+  const days = Number(S.settings.returnDays) || 14, h = (o.history || []).find((x) => x.status === "delivered");
+  const at = (h?.at?.seconds || h?.at?._seconds || o.updatedAt?.seconds || 0) * 1000; if (!at) return true;
+  return Date.now() - at <= days * 864e5;
+}
+function actions(o) {
+  const again = (o.items || []).filter((x) => x.id && findProduct(x.id)).length;
+  return `<div class="order-act">
+    ${again ? `<button class="btn btn-primary btn-sm" data-again="${esc(o.id)}">اطلب تاني</button>` : ""}
+    ${returnOpen(o) ? `<a class="btn btn-soft btn-sm" href="account.html?order=${esc(o.id)}&type=return#support">استبدال / استرجاع</a>` : ""}
+    ${o.status === "delivered" ? (o.items || []).slice(0, 1).filter((x) => x.id).map((x) => `<a class="btn btn-ghost btn-sm" href="product.html?id=${esc(x.id)}#reviews">قيّم المنتج</a>`).join("") : ""}
+    <a class="btn btn-ghost btn-sm" href="account.html?order=${esc(o.id)}#support">مشكلة في الطلب؟</a></div>`;
 }
 function trackBox() {
   return `<form class="trackcode form" id="tcForm"><h3>تتبّع طلب بالكود</h3><p class="muted">عملت طلب من غير حساب؟ اكتب الكود اللي وصلك.</p>
@@ -82,7 +103,7 @@ function hub() {
 }
 function body() {
   const el = $("#tabBody"); if (!el) return; stopSupport(); tcUnsub?.();
-  if (tab === "support") return mountSupport(el, { orders, presetOrder });
+  if (tab === "support") return mountSupport(el, { orders, presetOrder, presetType });
   if (tab === "profile") return profile(el);
   if (tab === "track") { el.innerHTML = trackBox(); bindTrack(); return; }
   if (tab === "wish") {
@@ -90,11 +111,12 @@ function body() {
     el.innerHTML = items.length ? `<div class="grid" id="wg">${items.map((p) => cardHTML(p)).join("")}</div>` : `<div class="empty" style="padding:30px 0"><p>مفيش منتجات في المفضلة.</p><a class="btn btn-primary" style="margin-top:14px" href="shop.html">تصفّح المنتجات</a></div>`;
     if (items.length) bindCards($("#wg")); return;
   }
-  el.innerHTML = orders.length ? `<div class="orders">${orders.map((o, i) => `<details class="order-card" ${i === 0 ? "open" : ""}><summary><span><b>#${fmtCode(o.id)}</b><small class="muted"> · ${esc(dateText(o.createdAt))}</small></span><span class="st ${o.status}">${ORDER_STATUS[o.status] || o.status}</span><b>${money(o.total)}</b></summary>
+  el.innerHTML = orders.length ? `<div class="orders">${orders.map((o, i) => `<details class="order-card" ${i === 0 ? "open" : ""}><summary><span><b>#${fmtCode(o.id)}</b><small class="muted"> · ${esc(dateText(o.createdAt))}</small></span><span class="st ${o.status}">${ORDER_STATUS[o.status] || o.status}</span><b>${money(o.total)}</b>${progress(o)}</summary>
     ${timeline(o)}
     <div class="mini">${(o.items || []).map((x) => `<div><img src="${esc(img(x.image, 100))}" alt=""><span>${esc(x.name)} ×${x.qty}</span><b>${money(x.lineTotal ?? x.price * x.qty)}</b></div>`).join("")}</div>
-    <div class="order-act"><a class="btn btn-soft btn-sm" href="account.html?order=${o.id}#support">مشكلة في الطلب؟</a></div></details>`).join("")}</div>${trackBox()}`
+    ${actions(o)}</details>`).join("")}</div>${trackBox()}`
     : `<div class="empty" style="padding:30px 0"><p>لسه معملتش أي طلب.</p><a class="btn btn-primary" style="margin-top:14px" href="shop.html">ابدأ التسوق</a></div>${trackBox()}`;
+  el.onclick = (e) => { const b = e.target.closest("[data-again]"); if (!b) return; const o = orders.find((x) => x.id === b.dataset.again); let n = 0; (o?.items || []).forEach((x) => { if (x.id && addToCart(x.id, x.qty, { silent: true })) n++; }); if (n) { toast("اتضافت المنتجات للسلة"); location.href = "cart.html"; } else toast("المنتجات دي مش متاحة حاليًا"); };
   bindTrack();
 }
 function profile(el) {

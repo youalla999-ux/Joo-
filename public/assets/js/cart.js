@@ -14,8 +14,8 @@ function draw() {
       <div class="cart-list">${lines.map((l) => `
         <div class="line">
           <a href="product.html?id=${encodeURIComponent(l.id)}"><img src="${esc(img(l.p.images?.[0], 200))}" alt=""></a>
-          <div><h4><a href="product.html?id=${encodeURIComponent(l.id)}">${esc(l.p.name)}</a></h4><b style="color:var(--forest)">${money(lineTotal(l.p, l.qty))}</b>${l.qty > 1 ? ` <small class="muted">(${money(l.p.price)} للقطعة)</small>` : ""}${offerOf(l.p) ? `<br><small class="dealnote">${l.qty >= offerOf(l.p).buy ? "عرض " : `ضيف ${offerOf(l.p).buy - (l.qty % offerOf(l.p).buy || 0)} كمان وخد عرض `}اشترِ ${offerOf(l.p).buy} وادفع ${offerOf(l.p).pay}</small>` : ""}<br><button class="rm" data-rm="${l.id}">حذف</button></div>
-          <div class="qty"><button data-inc="${l.id}" aria-label="زيادة">+</button><span>${l.qty}</span><button data-dec="${l.id}" aria-label="نقص">−</button></div>
+          <div><h4><a href="product.html?id=${encodeURIComponent(l.id)}">${esc(l.p.name)}</a></h4><b style="color:var(--forest)">${money(lineTotal(l.p, l.qty))}</b>${l.qty > 1 ? ` <small class="muted">(${money(l.p.price)} للقطعة)</small>` : ""}${offerOf(l.p) ? `<br><small class="dealnote">${l.qty >= offerOf(l.p).buy ? "عرض " : `ضيف ${offerOf(l.p).buy - (l.qty % offerOf(l.p).buy || 0)} كمان وخد عرض `}اشترِ ${offerOf(l.p).buy} وادفع ${offerOf(l.p).pay}</small>` : ""}<br><button class="rm" data-rm="${esc(l.id)}">حذف</button></div>
+          <div class="qty"><button data-inc="${esc(l.id)}" aria-label="زيادة">+</button><span>${l.qty}</span><button data-dec="${esc(l.id)}" aria-label="نقص">−</button></div>
         </div>`).join("")}</div>
     </div>
     <aside class="summary">

@@ -31,7 +31,7 @@ export const STORE = {
     aboutText: "Joo Store متجر بيجمع احتياجاتك في مكان واحد، بأسعار واضحة وطلب بيخلص في دقايق.",
     faq: [{ q: "إزاي أدفع؟", a: "الدفع عند الاستلام، أو تحويل لو متاح وقت الطلب." }, { q: "إزاي أتابع طلبي؟", a: "من حسابي ثم طلباتي، وتقدر تتابعه بكود الطلب كمان." }],
     hero: { title: "اطلب النهارده\nواستلم عند بابك", sub: "كل اللي محتاجه في مكان واحد.", cta: "شوف المنتجات", ctaLink: "shop.html", image: "" },
-    sections: { categories: true, featured: true, latest: true, top: true, reviews: true },
+    sections: { categories: true, featured: true, latest: true, top: true, reviews: true, fab: true },
     support: { greeting: "أهلاً بيك! اكتب مشكلتك وهنرد عليك هنا.", hours: "", quick: [] },
     categories: [],
     announcementCode: "",

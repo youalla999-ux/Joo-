@@ -1,5 +1,7 @@
+import { I } from "./layout.js";
 import { db, collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, getDoc } from "./firebase.js";
 import { S, start, onChange, findProduct, shipRange, offerOf, lineTotal, stars, soldOut, maxQty, discountPct, addToCart, cardHTML, bindCards, waLink, setTitle, emptyHTML } from "./core.js";
+import { api } from "./api.js";
 import { $, $$, esc, money, img, toast, timeText } from "./utils.js";
 
 start("shop");
@@ -64,11 +66,11 @@ function render(p) {
   </div>
   <div class="pinfo">
     ${p.category ? `<a class="cat" href="shop.html?cat=${encodeURIComponent(p.category)}">${esc(p.category)}</a>` : ""}
-    <h1>${esc(p.name)}</h1>
-    <div class="pprice"><b>${money(p.price)}</b>${off ? `<s>${money(p.oldPrice)}</s>` : ""}</div>
+    <div class="titlerow"><h1>${esc(p.name)}</h1><button type="button" class="share" id="shareBtn" aria-label="مشاركة المنتج"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button></div>
     ${stars(p) ? `<a class="rate-link" href="#reviews">${stars(p)}</a>` : ""}
+    <div class="pprice"><b>${money(p.price)}</b>${off ? `<s>${money(p.oldPrice)}</s><em>وفّر ${money(p.oldPrice - p.price)}</em>` : ""}</div>
     ${offerOf(p) ? `<div class="offer"><b>عرض خاص</b> اشترِ ${offerOf(p).buy} وادفع ${offerOf(p).pay} بس. ضيف الكمية وهيتحسب الخصم لوحده.</div>` : ""}
-    <div class="shipline">${shipLine()}</div>
+    <div class="shipline">${I.truck}<span>${shipLine()}</span></div>
     ${p.description ? `<p class="desc">${esc(p.description.split("\n")[0].slice(0, 160))}${p.description.length > 160 || p.description.includes("\n") ? "…" : ""}</p>` : ""}
     ${out ? `<div class="msg err">المنتج غير متوفر حاليًا</div>` : `
       ${max <= 5 ? `<div class="msg ok">باقي ${max} قطعة فقط</div>` : ""}
@@ -90,12 +92,14 @@ function render(p) {
     <form class="form panel-form" id="rvForm"><h3>شاركنا رأيك</h3>
       <div class="row"><label class="f">اسمك<input name="name" required maxlength="60"></label>
       <div class="f">تقييمك<div class="starpick" role="radiogroup" aria-label="التقييم">${[5, 4, 3, 2, 1].map((n) => `<input type="radio" name="rating" id="st${n}" value="${n}" ${n === 5 ? "checked" : ""}><label for="st${n}" title="${n}">★</label>`).join("")}</div></div></div>
+      <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
       <label class="f">رأيك في المنتج<textarea name="text" required maxlength="1000" rows="3"></textarea></label>
       <div class="msg err hidden" id="rvErr"></div><button class="btn btn-primary">إرسال التقييم</button><small class="muted">التقييم بيظهر بعد مراجعته.</small></form></section>`;
   loadReviews(p);
   $("#copyLink")?.addEventListener("click", async () => { try { await navigator.clipboard.writeText(location.href); toast("تم نسخ الرابط"); } catch {} });
   $$("[data-pt]", box).forEach((b) => (b.onclick = () => { $$("[data-pt]", box).forEach((x) => x.classList.toggle("on", x === b)); $$(".pt", box).forEach((x) => x.classList.toggle("hidden", x.id !== "pt-" + b.dataset.pt)); }));
   qty = 1; const upd = () => { const t = $("#ptotal"); if (t) t.innerHTML = qty > 1 || offerOf(p) ? `الإجمالي: <b>${money(lineTotal(p, qty))}</b>${lineTotal(p, qty) < p.price * qty ? ` <s>${money(p.price * qty)}</s>` : ""}` : ""; }; upd();
+  $("#shareBtn")?.addEventListener("click", async () => { const u = location.href, d = { title: p.name, text: p.name, url: u }; try { if (navigator.share) await navigator.share(d); else { await navigator.clipboard.writeText(u); toast("اتنسخ رابط المنتج"); } } catch {} });
   $("#vthumb")?.addEventListener("click", () => { $(".pmain", box).innerHTML = `<video src="${esc(p.video)}" controls playsinline autoplay></video>`; });
   stickyBar(p, max);
   $$(".thumbs img", box).forEach((t) => (t.onclick = () => { $("#pmain").src = img(imgs[+t.dataset.i], 1000); $$(".thumbs img", box).forEach((x) => x.classList.toggle("on", x === t)); }));
@@ -129,9 +133,9 @@ function loadReviews(p) {
   $("#rvForm").onsubmit = async (e) => {
     e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), btn = e.target.querySelector("button"); btn.disabled = true;
     try {
-      await addDoc(collection(db, "reviews"), { productId: p.id, productName: p.name, name: f.name.trim(), rating: Number(f.rating), text: f.text.trim(), approved: false, createdAt: serverTimestamp() });
+      await api("review", { productId: p.id, name: f.name.trim(), rating: Number(f.rating), text: f.text.trim(), website: f.website || "" });
       e.target.reset(); toast("شكرًا! تقييمك هيظهر بعد المراجعة");
-    } catch (er) { console.error(er); const m = $("#rvErr"); m.textContent = "تعذر إرسال التقييم."; m.classList.remove("hidden"); }
+    } catch (er) { console.error(er); const m = $("#rvErr"); m.textContent = er.status === 429 ? er.message : "تعذر إرسال التقييم."; m.classList.remove("hidden"); }
     btn.disabled = false;
   };
 }

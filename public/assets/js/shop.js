@@ -2,9 +2,10 @@ import { S, start, onChange, categories, cardHTML, bindCards, skeletons, emptyHT
 import { $, esc } from "./utils.js";
 import { searchProducts } from "./search.js";
 
-start("shop");
+const OFFERS = document.body.dataset.offers === "1";
+start(OFFERS ? "offers" : "shop");
 const params = new URLSearchParams(location.search);
-const st = { cat: params.get("cat") || "الكل", q: (params.get("q") || "").trim(), sort: "new", shown: 12, min: 0, max: 0, stock: false, offer: false };
+const st = { cat: params.get("cat") || "الكل", q: (params.get("q") || "").trim(), sort: OFFERS || params.get("sort") === "deals" ? "deals" : "new", shown: 12, min: 0, max: 0, stock: false, offer: OFFERS };
 const grid = $("#grid"); grid.innerHTML = skeletons(8); bindCards(grid);
 
 function visible() {
@@ -14,7 +15,7 @@ function visible() {
   if (st.max) l = l.filter((p) => p.price <= st.max);
   if (st.stock) l = l.filter((p) => !soldOut(p));
   if (st.offer) l = l.filter((p) => p.oldPrice > p.price || offerOf(p));
-  if (st.sort === "rate") l.sort((a, b) => (b.ratingCount ? b.ratingSum / b.ratingCount : 0) - (a.ratingCount ? a.ratingSum / a.ratingCount : 0)); else if (st.sort === "low") l.sort((a, b) => a.price - b.price); else if (st.sort === "high") l.sort((a, b) => b.price - a.price);
+  if (st.sort === "rate") l.sort((a, b) => (b.ratingCount ? b.ratingSum / b.ratingCount : 0) - (a.ratingCount ? a.ratingSum / a.ratingCount : 0)); else if (st.sort === "low") l.sort((a, b) => a.price - b.price); else if (st.sort === "high") l.sort((a, b) => b.price - a.price); else if (st.sort === "deals") l.sort((a, b) => (b.oldPrice > b.price ? b.oldPrice / b.price : 0) - (a.oldPrice > a.price ? a.oldPrice / a.price : 0));
   return l;
 }
 function draw() {
@@ -29,8 +30,9 @@ function draw() {
 onChange(draw);
 $("#chips").addEventListener("click", (e) => {
   const b = e.target.closest("[data-cat]"); if (!b) return;
-  st.cat = b.dataset.cat; st.shown = 12; history.replaceState(null, "", st.cat === "الكل" ? "shop.html" : `shop.html?cat=${encodeURIComponent(st.cat)}`); draw();
+  st.cat = b.dataset.cat; st.shown = 12; history.replaceState(null, "", st.cat === "الكل" ? (OFFERS ? "offers.html" : "shop.html") : `${OFFERS ? "offers" : "shop"}.html?cat=${encodeURIComponent(st.cat)}`); draw();
 });
+$("#sort").value = st.sort;
 $("#sort").addEventListener("change", (e) => { st.sort = e.target.value; draw(); });
 $("#more").addEventListener("click", () => { st.shown += 12; draw(); });
 // بحث حي في الهيدر
@@ -43,4 +45,6 @@ function fupdate() {
   const n = (st.min ? 1 : 0) + (st.max ? 1 : 0) + (st.stock ? 1 : 0) + (st.offer ? 1 : 0); fc.textContent = n; fc.classList.toggle("hidden", !n); draw();
 }
 ["pmin", "pmax", "fstock", "foffer"].forEach((id) => $("#" + id).addEventListener("input", fupdate));
-$("#freset").onclick = () => { $("#pmin").value = ""; $("#pmax").value = ""; $("#fstock").checked = false; $("#foffer").checked = false; fupdate(); };
+$("#freset").onclick = () => { $("#pmin").value = ""; $("#pmax").value = ""; $("#fstock").checked = false; $("#foffer").checked = OFFERS; fupdate(); };
+
+if (OFFERS) { $("#foffer").checked = true; $("#foffer").disabled = true; fupdate(); }

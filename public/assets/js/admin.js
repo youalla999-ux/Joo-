@@ -99,7 +99,7 @@ function start() {
 
 const TABS = () => {
   const n = A.orders.filter((o) => o.status === "new").length, rv = A.reviews.filter((r) => !r.approved).length, sp = A.tickets.filter((t) => t.unreadAdmin).length;
-  const d = (c) => (c ? ` <span class="dot">${c}</span>` : "");
+  const d = (c) => (c ? ` <span class="dot">${Number(c) || 0}</span>` : "");
   const all = [["البيع", [["dash", "الرئيسية", "orders"], ["orders", "الطلبات" + d(n), "orders"], ["support", "الدعم" + d(sp), "support"], ["reviews", "التقييمات" + d(rv), "reviews"]]],
     ["المتجر", [["products", "المنتجات", "products"], ["coupons", "الكوبونات", "coupons"], ["customers", "العملاء", "orders"], ["settings", "الإعدادات", "settings"]]],
     ...(A.me.role === "owner" ? [["الإدارة", [["team", "المشرفون", "owner"]]]] : [])];
@@ -168,8 +168,8 @@ function viewDash(el) {
 const num = (n) => Number(n || 0);
 function orderCard(o) {
   const c = o.customer || {};
-  return `<div class="ord"><header><span>#${code6(o.id)} · ${esc(c.name)}</span>
-    <select data-st="${o.id}">${Object.entries(ORDER_STATUS).map(([k, v]) => `<option value="${k}" ${o.status === k ? "selected" : ""}>${v}</option>`).join("")}</select></header>
+  return `<div class="ord"><header><span>#${esc(code6(o.id))} · ${esc(c.name)}</span>
+    <select data-st="${esc(o.id)}">${Object.entries(ORDER_STATUS).map(([k, v]) => `<option value="${k}" ${o.status === k ? "selected" : ""}>${v}</option>`).join("")}</select></header>
     <div class="meta">${dateText(o.createdAt)} · <a href="tel:${esc(c.phone)}" style="color:var(--green-dark);font-weight:700">${esc(c.phone)}</a>${c.phone2 ? ` / ${esc(c.phone2)}` : ""}</div>
     <div class="meta">${esc(c.gov)} - ${esc(c.city)} - ${esc(c.address)}</div>
     <div class="items">${(o.items || []).map((i) => `${esc(i.name)} ×${i.qty}`).join(" ، ")}</div>
@@ -177,7 +177,7 @@ function orderCard(o) {
     ${o.notes ? `<div class="meta">ملاحظات: ${esc(o.notes)}</div>` : ""}
     ${o.coupon?.code ? `<div class="meta">كوبون: <b>${esc(o.coupon.code)}</b> (−${money(o.coupon.discount)})</div>` : ""}
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><b style="color:var(--green-dark)">${money(o.total)} <small style="font-weight:400;color:var(--muted)">(شحن ${money(o.shipping)})</small></b>
-    <span style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" data-print="${o.id}">طباعة</button><a class="btn btn-soft btn-sm" target="_blank" rel="noopener" href="https://wa.me/${String(c.phone || "").replace(/^0/, "20")}">واتساب</a><button class="btn btn-danger btn-sm" data-delo="${o.id}">حذف</button></span></div></div>`;
+    <span style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" data-print="${esc(o.id)}">طباعة</button><a class="btn btn-soft btn-sm" target="_blank" rel="noopener" href="https://wa.me/${esc(String(c.phone || "").replace(/\D/g, "").replace(/^0/, "20"))}">واتساب</a><button class="btn btn-danger btn-sm" data-delo="${esc(o.id)}">حذف</button></span></div></div>`;
 }
 function bindOrders(el) {
   $$("[data-st]", el).forEach((s) => (s.onchange = async () => {
@@ -204,30 +204,30 @@ function viewOrders(el) {
   draw();
 }
 function csv(name, rows) {
-  const t = "﻿" + rows.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+  const t = "﻿" + rows.map((r) => r.map((c) => `"${(typeof c === "string" && /^[=+\-@\t\r]/.test(c) ? "'" : "") + String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t], { type: "text/csv;charset=utf-8" })); a.download = name; a.click(); URL.revokeObjectURL(a.href);
 }
 function printInvoice(o) {
   if (!o) return; const c = o.customer || {};
   const w = window.open("", "_blank"); if (!w) return toast("اسمح بالنوافذ المنبثقة للطباعة", "err");
-  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>فاتورة ${code6(o.id)}</title><style>
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>فاتورة ${esc(code6(o.id))}</title><style>
   body{font-family:Cairo,Tahoma,sans-serif;max-width:700px;margin:24px auto;color:#333}h1{color:#4f7243;margin:0}table{width:100%;border-collapse:collapse;margin:16px 0}
   th,td{border-bottom:1px solid #ddd;padding:8px;text-align:right}th{background:#f3f7ef}.r{display:flex;justify-content:space-between}.t{font-size:1.2rem;font-weight:800}</style>
-  <div class="r"><div><h1>Joo Store</h1><small>Easy Shopping</small></div><div style="text-align:left"><b>فاتورة #${code6(o.id)}</b><br>${esc(dateText(o.createdAt))}</div></div><hr>
+  <div class="r"><div><h1>Joo Store</h1><small>Easy Shopping</small></div><div style="text-align:left"><b>فاتورة #${esc(code6(o.id))}</b><br>${esc(dateText(o.createdAt))}</div></div><hr>
   <p><b>${esc(c.name)}</b><br>${esc(c.phone)}${c.phone2 ? " / " + esc(c.phone2) : ""}<br>${esc(c.gov)} - ${esc(c.city)}<br>${esc(c.address)}</p>
-  <table><tr><th>المنتج</th><th>السعر</th><th>الكمية</th><th>الإجمالي</th></tr>${(o.items || []).map((i) => `<tr><td>${esc(i.name)}</td><td>${money(i.price)}</td><td>${i.qty}</td><td>${money(i.price * i.qty)}</td></tr>`).join("")}</table>
+  <table><tr><th>المنتج</th><th>السعر</th><th>الكمية</th><th>الإجمالي</th></tr>${(o.items || []).map((i) => `<tr><td>${esc(i.name)}</td><td>${money(i.price)}</td><td>${Number(i.qty) || 0}</td><td>${money(i.price * i.qty)}</td></tr>`).join("")}</table>
   <div class="r"><span>المجموع</span><span>${money(o.subtotal)}</span></div>${o.coupon?.discount ? `<div class="r"><span>خصم (${esc(o.coupon.code)})</span><span>−${money(o.coupon.discount)}</span></div>` : ""}
-  <div class="r"><span>الشحن</span><span>${money(o.shipping)}</span></div><div class="r t"><span>الإجمالي (الدفع عند الاستلام)</span><span>${money(o.total)}</span></div>
-  <script>onload=()=>setTimeout(print,300)<\/script></html>`);
-  w.document.close();
+  <div class="r"><span>الشحن</span><span>${money(o.shipping)}</span></div><div class="r t"><span>الإجمالي (${o.payment === "card" ? "مدفوع/بطاقة" : o.payment === "transfer" ? "تحويل" : "الدفع عند الاستلام"})</span><span>${money(o.total)}</span></div>
+  </html>`);
+  w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 400);
 }
 
 /* ================= Products ================= */
 function viewProducts(el) {
   el.innerHTML = `<h1>المنتجات</h1><div class="bar"><span>${A.products.length} منتج</span><input id="psearch" type="search" placeholder="ابحث باسم المنتج أو القسم" style="flex:1;max-width:320px;padding:9px 14px;border:1.5px solid var(--line);border-radius:12px"><button class="btn btn-primary" id="add">+ منتج جديد</button></div>
   <div class="tbl"><table><thead><tr><th></th><th>المنتج</th><th>القسم</th><th>السعر</th><th>المخزون</th><th></th></tr></thead><tbody>
-  ${A.products.map((p) => `<tr class="${p.active === false ? "off" : ""}"><td><img class="t" src="${esc(img(p.images?.[0], 100))}" alt=""></td><td><b>${esc(p.name)}</b>${p.active === false ? " <small>(مخفي)</small>" : ""}</td><td>${esc(p.category || "-")}</td><td><input class="qe" type="number" min="0" step="0.01" value="${p.price}" data-pp="${p.id}" aria-label="السعر"></td><td><input class="qe" type="number" min="0" step="1" value="${p.stock == null || p.stock === "" ? "" : p.stock}" placeholder="∞" data-ps="${p.id}" aria-label="المخزون"></td>
-  <td><div class="acts"><button class="btn btn-soft btn-sm" data-edit="${p.id}">تعديل</button><button class="btn btn-ghost btn-sm" data-dup="${p.id}">نسخ</button><button class="btn btn-danger btn-sm" data-del="${p.id}">حذف</button></div></td></tr>`).join("") || `<tr><td colspan="6" style="text-align:center;padding:30px">لا توجد منتجات بعد، أضف أول منتج!</td></tr>`}
+  ${A.products.map((p) => `<tr class="${p.active === false ? "off" : ""}"><td><img class="t" src="${esc(img(p.images?.[0], 100))}" alt=""></td><td><b>${esc(p.name)}</b>${p.active === false ? " <small>(مخفي)</small>" : ""}</td><td>${esc(p.category || "-")}</td><td><input class="qe" type="number" min="0" step="0.01" value="${p.price}" data-pp="${esc(p.id)}" aria-label="السعر"></td><td><input class="qe" type="number" min="0" step="1" value="${p.stock == null || p.stock === "" ? "" : p.stock}" placeholder="∞" data-ps="${esc(p.id)}" aria-label="المخزون"></td>
+  <td><div class="acts"><button class="btn btn-soft btn-sm" data-edit="${esc(p.id)}">تعديل</button><button class="btn btn-ghost btn-sm" data-dup="${esc(p.id)}">نسخ</button><button class="btn btn-danger btn-sm" data-del="${esc(p.id)}">حذف</button></div></td></tr>`).join("") || `<tr><td colspan="6" style="text-align:center;padding:30px">لا توجد منتجات بعد، أضف أول منتج!</td></tr>`}
   </tbody></table></div>`;
   $("#add").onclick = () => openForm();
   const qe = (attr, field, conv) => $$(`[${attr}]`, el).forEach((i) => (i.onchange = async () => {
@@ -259,9 +259,14 @@ function openForm(p) {
 async function uploadToCloudinary(file) {
   if (!CLOUDINARY.cloudName || CLOUDINARY.cloudName === "YOUR_CLOUD_NAME") throw new Error("ضع Cloud name في assets/js/config.js");
   if (file.size > 10 * 1024 * 1024) throw new Error("الصورة أكبر من 10MB");
-  const fd = new FormData();
-  fd.append("file", file); fd.append("upload_preset", CLOUDINARY.uploadPreset); fd.append("folder", CLOUDINARY.folder);
-  const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/image/upload`, { method: "POST", body: fd });
+  const fd = new FormData(); fd.append("file", file);
+  let url = `https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/image/upload`;
+  try {
+    const g = await api("upload-sign", {});
+    url = `https://api.cloudinary.com/v1_1/${g.cloudName}/image/upload`;
+    fd.append("api_key", g.apiKey); fd.append("timestamp", g.timestamp); fd.append("signature", g.signature); fd.append("folder", g.folder); fd.append("allowed_formats", g.allowedFormats);
+  } catch { fd.append("upload_preset", CLOUDINARY.uploadPreset); fd.append("folder", CLOUDINARY.folder); }
+  const r = await fetch(url, { method: "POST", body: fd });
   const j = await r.json();
   if (!r.ok) throw new Error(j.error?.message || "فشل رفع الصورة");
   return j.secure_url;
@@ -306,7 +311,7 @@ function viewCoupons(el) {
   <div class="tbl"><table><thead><tr><th>الكود</th><th>الخصم</th><th>الحد الأدنى</th><th>الانتهاء</th><th>الاستخدام</th><th></th></tr></thead><tbody>
   ${A.coupons.map((c) => `<tr class="${c.active === false ? "off" : ""}"><td><b>${esc(c.id)}</b></td><td>${c.type === "percent" ? c.value + "%" : money(c.value)}</td><td>${money(c.minOrder)}</td><td>${esc(c.expires || "-")}</td>
   <td>${c.uses || 0}${c.maxUses ? ` / ${c.maxUses}` : ""}</td>
-  <td><div class="acts"><button class="btn btn-soft btn-sm" data-tg="${c.id}">${c.active === false ? "تفعيل" : "إيقاف"}</button><button class="btn btn-danger btn-sm" data-dc="${c.id}">حذف</button></div></td></tr>`).join("") || `<tr><td colspan="6" style="text-align:center;padding:24px">لا توجد كوبونات</td></tr>`}</tbody></table></div>`;
+  <td><div class="acts"><button class="btn btn-soft btn-sm" data-tg="${esc(c.id)}">${c.active === false ? "تفعيل" : "إيقاف"}</button><button class="btn btn-danger btn-sm" data-dc="${esc(c.id)}">حذف</button></div></td></tr>`).join("") || `<tr><td colspan="6" style="text-align:center;padding:24px">لا توجد كوبونات</td></tr>`}</tbody></table></div>`;
   $("#cf").onsubmit = async (e) => {
     e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); const code = f.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
     if (code.length < 2) return toast("الكود حروف إنجليزي وأرقام، حرفين على الأقل", "err");
@@ -344,10 +349,10 @@ function viewSettings(el) {
     <div class="row"><label class="f">البريد<input name="email" value="${esc(s.email)}" dir="ltr"></label><label class="f">العنوان<input name="address" value="${esc(s.address)}"></label></div>
     <div class="row3"><label class="f">فيسبوك (رابط)<input name="facebook" value="${esc(so.facebook)}" dir="ltr"></label><label class="f">إنستجرام (رابط)<input name="instagram" value="${esc(so.instagram)}" dir="ltr"></label><label class="f">تيك توك (رابط)<input name="tiktok" value="${esc(so.tiktok)}" dir="ltr"></label></div></div></details>
   <details><summary>الصفحة الرئيسية</summary><div class="form">
-    <div class="chks">${chk("sec_categories", sec.categories, "الأقسام")}${chk("sec_featured", sec.featured, "المختارات (منتجات مميزة)")}${chk("sec_latest", sec.latest, "وصل جديد")}${chk("sec_top", sec.top, "الأعلى تقييمًا")}${chk("sec_reviews", sec.reviews, "آراء العملاء (التقييمات المعتمدة)")}</div>
+    <div class="chks">${chk("sec_categories", sec.categories, "الأقسام")}${chk("sec_featured", sec.featured, "المختارات (منتجات مميزة)")}${chk("sec_latest", sec.latest, "وصل جديد")}${chk("sec_top", sec.top, "الأعلى تقييمًا")}${chk("sec_reviews", sec.reviews, "آراء العملاء (التقييمات المعتمدة)")}${chk("sec_fab", sec.fab, "زرار الدعم العائم")}</div>
     <b>عرض اليوم</b>
     <div class="chks">${chk("deal_on", d.on === true && d.on, "تفعيل")}</div>
-    <div class="row"><label class="f">المنتج<select name="deal_p"><option value="">— اختر —</option>${A.products.map((p) => `<option value="${p.id}" ${d.productId === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label><label class="f">العنوان<input name="deal_title" value="${esc(d.title)}"></label></div>
+    <div class="row"><label class="f">المنتج<select name="deal_p"><option value="">— اختر —</option>${A.products.map((p) => `<option value="${esc(p.id)}" ${d.productId === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label><label class="f">العنوان<input name="deal_title" value="${esc(d.title)}"></label></div>
     <div class="row"><label class="f">ينتهي في<input name="deal_end" type="datetime-local" value="${esc(d.endsAt)}"></label><label class="f">الكمية الأصلية (لشريط المتبقي، المخزون الحالي هو المتبقي)<input name="deal_total" type="number" min="0" value="${num(d.total)}"></label></div>
     <b>ترتيب الأقسام وصورها</b><p class="muted">الأقسام الموجودة هنا بتظهر أول واحدة بالترتيب ده، وباقي الأقسام بعدها. صورة القسم اختيارية.</p>
     <div id="cats">${(s.categories || []).map((c) => row("cat", [["name", c.name, "اسم القسم (مطابق لقسم المنتج)"], ["image", c.image || "", "رابط الصورة"]])).join("")}</div>
@@ -389,7 +394,7 @@ function viewSettings(el) {
     const data = {
       name: v.name.trim() || "Joo Store", whatsapp: v.whatsapp.trim(), phone: v.phone.trim(), email: v.email.trim(), address: v.address.trim(),
       social: { facebook: v.facebook.trim(), instagram: v.instagram.trim(), tiktok: v.tiktok.trim() },
-      sections: { categories: on("sec_categories"), featured: on("sec_featured"), latest: on("sec_latest"), top: on("sec_top"), reviews: on("sec_reviews") },
+      sections: { categories: on("sec_categories"), featured: on("sec_featured"), latest: on("sec_latest"), top: on("sec_top"), reviews: on("sec_reviews"), fab: on("sec_fab") },
       categories: rows("#cats").filter((c) => c.name),
       deal: { on: on("deal_on"), productId: v.deal_p, title: v.deal_title.trim() || "عرض اليوم", endsAt: v.deal_end, total: +v.deal_total || 0 },
       shipping: +v.shipping || 0, freeShippingOver: +v.freeShippingOver || 0, deliveryNote: v.deliveryNote.trim(), shippingByGov: byGov,
@@ -407,8 +412,8 @@ function viewTeam(el) {
   el.innerHTML = `<h1>المشرفون</h1><div class="panel" style="margin-bottom:18px"><p class="muted" style="margin-bottom:10px">الشخص يسجل حساب من صفحة اللوحة، فتظهر له رسالة فيها UID، يرسله لك وتضيفه هنا وتحدد صلاحياته.</p>
   <form class="form" id="tf"><div class="row"><label class="f">UID<input name="uid" required></label><label class="f">البريد (للتعريف)<input name="email" type="email"></label></div>
   <b>الصلاحيات</b><div class="chks">${boxes("x")}</div><button class="btn btn-primary">إضافة مشرف</button></form></div>
-  ${A.admins.map((a) => `<div class="panel" style="margin-bottom:10px"><div class="bar" style="margin:0 0 8px"><b>${esc(a.email || a.id)} <small class="muted">${a.role === "owner" ? "مالك" : "مشرف"}</small></b>${a.role === "owner" || a.id === A.me.uid ? `<small class="muted">${a.role === "owner" ? "كل الصلاحيات" : "(أنت)"}</small>` : `<button class="btn btn-danger btn-sm" data-ra="${a.id}">إزالة</button>`}</div>
-  ${a.role === "owner" ? "" : `<div class="chks" data-pid="${a.id}">${boxes("", a.perms || {})}</div>`}</div>`).join("")}`;
+  ${A.admins.map((a) => `<div class="panel" style="margin-bottom:10px"><div class="bar" style="margin:0 0 8px"><b>${esc(a.email || a.id)} <small class="muted">${a.role === "owner" ? "مالك" : "مشرف"}</small></b>${a.role === "owner" || a.id === A.me.uid ? `<small class="muted">${a.role === "owner" ? "كل الصلاحيات" : "(أنت)"}</small>` : `<button class="btn btn-danger btn-sm" data-ra="${esc(a.id)}">إزالة</button>`}</div>
+  ${a.role === "owner" ? "" : `<div class="chks" data-pid="${esc(a.id)}">${boxes("", a.perms || {})}</div>`}</div>`).join("")}`;
   const read = (root) => Object.fromEntries(PERMS.map(([k]) => [k, !!root.querySelector(`[data-pk="${k}"]`)?.checked]));
   $("#tf").onsubmit = async (e) => {
     e.preventDefault(); const f = new FormData(e.target), perms = Object.fromEntries(PERMS.map(([k]) => [k, f.get("p_" + k) === "on"]));
@@ -439,7 +444,7 @@ function drawThread() {
 }
 function viewSupport(el) {
   const t = A.tickets.find((x) => x.id === A.sel);
-  el.innerHTML = `<h1>الدعم الفني</h1><div class="supp"><div class="slist">${A.tickets.map((x) => `<button data-t="${x.id}" class="${x.id === A.sel ? "on" : ""}"><b>${esc(x.name)}${x.unreadAdmin ? ` <span class="dot">جديد</span>` : ""}</b><span>${esc(x.subject)}${x.status === "closed" ? " · مغلقة" : ""}</span><small>${esc((x.lastMessage || "").slice(0, 60))}</small></button>`).join("") || "<p class='muted'>لا توجد محادثات بعد.</p>"}</div>
+  el.innerHTML = `<h1>الدعم الفني</h1><div class="supp"><div class="slist">${A.tickets.map((x) => `<button data-t="${esc(x.id)}" class="${x.id === A.sel ? "on" : ""}"><b>${esc(x.name)}${x.unreadAdmin ? ` <span class="dot">جديد</span>` : ""}</b><span>${esc(x.subject)}${x.status === "closed" ? " · مغلقة" : ""}</span><small>${esc((x.lastMessage || "").slice(0, 60))}</small></button>`).join("") || "<p class='muted'>لا توجد محادثات بعد.</p>"}</div>
   <div class="sthread">${t ? `<header><div><b>${esc(t.name)}</b> · <a href="tel:${esc(t.phone)}">${esc(t.phone)}</a><br><small>${esc(t.subject)}${t.orderCode ? ` · طلب <b>${esc(fmtCode(t.orderCode))}</b>` : ""}</small></div>
     <button class="btn btn-ghost btn-sm" id="tkToggle">${t.status === "closed" ? "إعادة فتح" : "إغلاق المحادثة"}</button></header>
     <div class="msgs" id="adMsgs"></div>
@@ -466,7 +471,7 @@ function viewSupport(el) {
 function viewReviews(el) {
   const row = (r) => `<div class="ord"><header><span>${esc(r.productName || r.productId)} · ${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span><span class="muted" style="font-weight:400">${esc(timeText(r.createdAt))}</span></header>
     <div class="meta"><b>${esc(r.name)}</b></div><div class="items">${esc(r.text)}</div>
-    <div style="display:flex;gap:8px">${r.approved ? "" : `<button class="btn btn-primary btn-sm" data-ok="${r.id}">اعتماد ونشر</button>`}<button class="btn btn-danger btn-sm" data-del="${r.id}">حذف</button></div></div>`;
+    <div style="display:flex;gap:8px">${r.approved ? "" : `<button class="btn btn-primary btn-sm" data-ok="${esc(r.id)}">اعتماد ونشر</button>`}<button class="btn btn-danger btn-sm" data-del="${esc(r.id)}">حذف</button></div></div>`;
   const pend = A.reviews.filter((r) => !r.approved), ok = A.reviews.filter((r) => r.approved);
   el.innerHTML = `<h1>التقييمات</h1><h3 style="margin:8px 0">بانتظار المراجعة (${pend.length})</h3>${pend.map(row).join("") || "<p class='muted'>لا توجد تقييمات جديدة.</p>"}<h3 style="margin:20px 0 8px">المنشورة (${ok.length})</h3>${ok.map(row).join("") || "<p class='muted'>لا يوجد.</p>"}`;
   const find = (id) => A.reviews.find((r) => r.id === id);

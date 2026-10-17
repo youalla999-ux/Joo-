@@ -9,10 +9,10 @@ export const I = {
   home: ico('<path d="m4 11 8-6.5 8 6.5"/><path d="M6 10v9.5h12V10"/><path d="M10 19.5v-5h4v5"/>'),
   shop: ico('<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>'),
   menu: ico('<path d="M4 7h16M4 12h16M4 17h10"/>'),
-  cash: ico('<rect x="3" y="6.5" width="18" height="11" rx="2"/><circle cx="12" cy="12" r="2.6"/>'),
-  truck: ico('<path d="M3 6.5h11v9H3zM14 10h4l3 3v2.5h-7"/><circle cx="7" cy="17" r="1.8"/><circle cx="17" cy="17" r="1.8"/>'),
-  swap: ico('<path d="M4 9h13l-3-3M20 15H7l3 3"/>'),
-  chat: ico('<path d="M4 5h16v11H9l-5 4z"/>'),
+  cash: ico('<rect x="3" y="6" width="18" height="12" rx="3"/><circle cx="12" cy="12" r="2.8"/><path d="M6.5 9.5v.01M17.5 14.5v.01"/>'),
+  truck: ico('<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H14v10H3z"/><path d="M14 9.5h3.6l3.4 3.4V16h-7"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/>'),
+  swap: ico('<path d="M4 8.5h13.5"/><path d="m14 5 3.5 3.5L14 12"/><path d="M20 15.5H6.5"/><path d="m10 12-3.5 3.5L10 19"/>'),
+  chat: ico('<path d="M5 5.5h14a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-7l-4.5 3.5V17H5a2 2 0 0 1-2-2V7.5a2 2 0 0 1 2-2z"/><path d="M8 10h8M8 13h5"/>'),
 };
 
 export function mountLayout(active = "") {
@@ -32,7 +32,7 @@ export function mountLayout(active = "") {
         <a class="cart-pill" href="cart.html" id="btnCart" aria-label="السلة">${I.bag}<b id="cartTotal">٠ ج.م</b><em class="badge hidden" id="cartCount">0</em></a>
       </div>
     </div>
-    <div class="catnav-wrap"><nav class="wrap catnav" id="catNav" aria-label="الأقسام"><button type="button" class="all" id="allCats">${I.menu}<span>كل الأقسام</span></button><a href="shop.html" class="${active === "shop" ? "on" : ""}">المتجر</a><span id="catLinks" style="display:contents"></span><span class="sep"></span><a href="about.html" class="${active === "about" ? "on" : ""}">من نحن</a><a href="contact.html" class="${active === "contact" ? "on" : ""}">تواصل معنا</a></nav></div>`;
+    <div class="catnav-wrap"><nav class="wrap catnav" id="catNav" aria-label="الأقسام"><button type="button" class="all" id="allCats">${I.menu}<span>كل الأقسام</span></button><a href="shop.html" class="${active === "shop" ? "on" : ""}">المتجر</a><a href="offers.html" class="${active === "offers" ? "on" : ""}">العروض</a><span id="catLinks" style="display:contents"></span><span class="sep"></span><a href="about.html" class="${active === "about" ? "on" : ""}">من نحن</a><a href="contact.html" class="${active === "contact" ? "on" : ""}">تواصل معنا</a></nav></div>`;
     const q = new URLSearchParams(location.search).get("q");
     if (q && active === "shop") $("#q").value = q;
   }
@@ -44,7 +44,7 @@ export function mountLayout(active = "") {
     <div class="wrap">
       <div class="fcols">
         <div class="fbrand"><div class="brandline"><img src="assets/img/favicon.png" alt=""><b id="fName">Joo Store</b></div><p id="fAbout"></p><div class="social" id="fSocial"></div></div>
-        <div><h4>تسوّق</h4><a href="shop.html">كل المنتجات</a><a href="cart.html">السلة</a><a href="account.html">حسابي وطلباتي</a><a href="account.html#track">تتبع طلب</a></div>
+        <div><h4>تسوّق</h4><a href="shop.html">كل المنتجات</a><a href="offers.html">العروض</a><a href="cart.html">السلة</a><a href="account.html">حسابي وطلباتي</a><a href="account.html#track">تتبع طلب</a></div>
         <div><h4>مساعدة</h4><a href="returns.html">الاستبدال والاسترجاع</a><a href="contact.html#faq">أسئلة شائعة</a><a href="about.html">من نحن</a><a href="contact.html">تواصل معنا</a></div>
         <div><h4>تواصل</h4><div id="fContact"></div><a id="footWa" class="btn btn-peach btn-sm hidden" target="_blank" rel="noopener" style="margin-top:10px">كلمنا على واتساب</a></div>
       </div>
@@ -84,7 +84,7 @@ export function updateChrome({ total, count, wa, user, cats, name, about, phone,
   const mbody = $("#menuBody");
   if (mbody && mbody.dataset.k !== catKey) {
     mbody.dataset.k = catKey;
-    mbody.innerHTML = `<a href="shop.html" class="m-all">كل المنتجات</a><h3>الأقسام</h3>${(cats || []).map(([c, n]) => `<a href="shop.html?cat=${encodeURIComponent(c)}"><span>${safe(c)}</span><small>${n}</small></a>`).join("") || "<p class='muted'>الأقسام هتظهر بعد إضافة المنتجات.</p>"}<h3>المتجر</h3><a href="account.html">حسابي وطلباتي</a><a href="about.html">من نحن</a><a href="returns.html">الاستبدال والاسترجاع</a><a href="contact.html">تواصل معنا</a>`;
+    mbody.innerHTML = `<a href="shop.html" class="m-all">كل المنتجات</a><a href="offers.html">العروض والخصومات</a><h3>الأقسام</h3>${(cats || []).map(([c, n]) => `<a href="shop.html?cat=${encodeURIComponent(c)}"><span>${safe(c)}</span><small>${n}</small></a>`).join("") || "<p class='muted'>الأقسام هتظهر بعد إضافة المنتجات.</p>"}<h3>المتجر</h3><a href="account.html">حسابي وطلباتي</a><a href="about.html">من نحن</a><a href="returns.html">الاستبدال والاسترجاع</a><a href="contact.html">تواصل معنا</a>`;
   }
   const u = $("#navAccount"); if (u) u.classList.toggle("in", !!user);
 

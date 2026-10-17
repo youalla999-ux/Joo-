@@ -26,24 +26,15 @@ function drawDeal() {
     <div class="deal-price"><b>${money(p.price)}</b>${off ? `<s>${money(p.oldPrice)}</s>` : ""}</div>
     ${pct !== null ? `<div class="meter" role="img" aria-label="تم بيع ${pct}%"><i style="width:${pct}%"></i></div><p class="muted">اتباع ${pct}% · فاضل ${left} قطعة</p>` : ""}</div>
     <div class="deal-stub">${end ? `<small>العرض بينتهي بعد</small><div class="count" id="dealCount" dir="ltr"></div>` : `<small>عرض محدود</small>`}
-    <button class="btn" data-add="${p.id}" ${left === 0 ? "disabled" : ""}>أضف للسلة</button></div></div>`;
+    <button class="btn" data-add="${esc(p.id)}" ${left === 0 ? "disabled" : ""}>أضف للسلة</button></div></div>`;
   if (end) { const c = $("#dealCount"), run = () => { let t = Math.max(0, end - Date.now()); if (!t) { clearInterval(dealT); w.classList.add("hidden"); return; } const dd = Math.floor(t / 864e5); t %= 864e5; c.innerHTML = `${dd ? `<span><b>${dd}</b>يوم</span>` : ""}<span><b>${pad(Math.floor(t / 36e5))}</b>ساعة</span><span><b>${pad(Math.floor((t % 36e5) / 6e4))}</b>دقيقة</span><span><b>${pad(Math.floor((t % 6e4) / 1e3))}</b>ثانية</span>`; }; run(); dealT = setInterval(run, 1000); }
 }
 
-const grid = $("#latest"); grid.innerHTML = skeletons(4); bindCards(grid); bindCards($("#featured")); bindCards($("#top")); bindCards($("#dealWrap")); bindCards($("#catSections"));
+const grid = $("#latest"); grid.innerHTML = skeletons(4); bindCards(grid); bindCards($("#featured")); bindCards($("#top")); bindCards($("#dealWrap")); bindCards($("#hot")); bindCards($("#recent")); bindCards($("#catSections"));
 onChange(() => {
   const st = S.settings, sec = st.sections;
   if (!S.loaded) return;
   drawDeal();
-  { const pay = st.pay || {}, f = Number(st.freeShippingOver) || 0, r = shipRange(), rd = Number(st.returnDays) || 0;
-    const items = [
-      pay.cod !== false && [I.cash, "الدفع عند الاستلام", "عاين طلبك وبعدين ادفع"],
-      [I.truck, "توصيل لكل المحافظات", f ? `شحن مجاني فوق ${money(f)}` : r ? `الشحن من ${money(r[0])}` : "أسعار الشحن واضحة قبل التأكيد"],
-      rd > 0 && [I.swap, `استبدال خلال ${rd} يوم`, "لو المنتج مش زي ما اتوقعت"],
-      [I.chat, "دعم من حسابك", "محادثة مباشرة مع فريقنا"],
-    ].filter(Boolean);
-    $("#trust").innerHTML = items.map(([i, t, d]) => `<div>${i}<b>${t}</b><span>${d}</span></div>`).join("");
-  }
   const rated = S.products.filter((p) => p.ratingCount >= 1).sort((a, b) => b.ratingSum / b.ratingCount - a.ratingSum / a.ratingCount || b.ratingCount - a.ratingCount).slice(0, 4);
   $("#top").innerHTML = rated.map((p) => cardHTML(p)).join(""); $("#topWrap").classList.toggle("hidden", !rated.length || sec.top === false);
   $("#revWrap").classList.toggle("hidden", !revs.length || sec.reviews === false);
@@ -58,10 +49,20 @@ onChange(() => {
   }).join("");
   $("#catsWrap").classList.toggle("hidden", !order.length || sec.categories === false);
   const cs = $("#catSections"), top4 = order.slice(0, 5).map((c) => [c, S.products.filter((x) => x.category === c).slice(0, 4)]).filter(([, l]) => l.length >= 2);
-  cs.innerHTML = sec.categories === false ? "" : top4.map(([c, l]) => `<section class="wrap block"><div class="block-head"><h2>${esc(c)}</h2><a class="more-link" href="shop.html?cat=${encodeURIComponent(c)}">عرض الكل ←</a></div><div class="grid rail">${l.map((p) => cardHTML(p)).join("")}</div></section>`).join("");
+  cs.innerHTML = sec.categories === false ? "" : top4.map(([c, l]) => `<section class="wrap block"><div class="block-head"><h2>${esc(c)}</h2><a class="more-link" href="shop.html?cat=${encodeURIComponent(c)}">عرض الكل</a></div><div class="grid rail">${l.map((p) => cardHTML(p)).join("")}</div></section>`).join("");
   const feat = S.products.filter((p) => p.featured).slice(0, 4);
   $("#featured").innerHTML = feat.map((p) => cardHTML(p)).join(""); $("#featWrap").classList.toggle("hidden", !feat.length || sec.featured === false);
+  const hot = S.products.filter((p) => p.oldPrice > p.price && !(p.stock != null && p.stock !== "" && Number(p.stock) <= 0)).sort((a, b) => b.oldPrice / b.price - a.oldPrice / a.price).slice(0, 8);
+  $("#hot").innerHTML = hot.map((p) => cardHTML(p)).join(""); $("#hotWrap").classList.toggle("hidden", hot.length < 2);
   const list = S.products.slice(0, 8);
   $("#latestWrap").classList.toggle("hidden", sec.latest === false);
   grid.innerHTML = list.length ? list.map((p, i) => cardHTML(p)).join("") : emptyHTML(S.error ? "تعذر تحميل المنتجات. حاول تاني بعد شوية." : "المنتجات جاية قريب.");
+});
+
+// شفته قبل كده (من جهاز الزائر فقط)
+onChange(() => {
+  if (!S.loaded) return;
+  let ids = []; try { ids = JSON.parse(localStorage.getItem("joo_recent")) || []; } catch {}
+  const l = ids.map((id) => S.products.find((p) => p.id === id)).filter(Boolean).slice(0, 6);
+  $("#recent").innerHTML = l.map((p) => cardHTML(p)).join(""); $("#recentWrap").classList.toggle("hidden", !l.length);
 });

@@ -4,6 +4,8 @@ import { STORE } from "./config.js";
 import { esc, money, img, toast } from "./utils.js";
 import { mountLayout, updateChrome, bump } from "./layout.js";
 import { initSearch } from "./search.js";
+import { api } from "./api.js";
+import { mountFab } from "./fab.js";
 
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -39,7 +41,7 @@ function emit() { chrome(); listeners.forEach((f) => f()); }
 /* ---------- Data ---------- */
 export function start(active) {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost") && !navigator.webdriver) navigator.serviceWorker.register("/sw.js").catch(() => {});
-  curActive = active; mountLayout(active);
+  curActive = active; mountLayout(active); mountFab();
   initSearch({ products: () => S.products, money, img, esc });
   chrome();
   onSnapshot(
@@ -106,14 +108,11 @@ export function clearCart() { S.cart = []; S.coupon = null; save("joo_coupon", n
 export async function applyCoupon(raw) {
   const code = String(raw || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, ""); if (!code) return { ok: false, msg: "اكتب كود الخصم" };
   try {
-    const d = await getDoc(doc(db, "coupons", code)); const c = d.exists() ? d.data() : null;
-    if (!c || c.active === false) return { ok: false, msg: "الكود غير صحيح" };
-    if (c.expires && new Date(c.expires + "T23:59:59") < new Date()) return { ok: false, msg: "انتهت صلاحية الكود" };
-    if (c.maxUses && (c.uses || 0) >= c.maxUses) return { ok: false, msg: "الكود استُنفد" };
-    S.coupon = { code, type: c.type, value: Number(c.value), minOrder: Number(c.minOrder) || 0 };
+    const { coupon: c } = await api("coupon", { code });
+    S.coupon = { code: c.code, type: c.type, value: Number(c.value), minOrder: Number(c.minOrder) || 0 };
     save("joo_coupon", S.coupon); emit();
     return discount() ? { ok: true, msg: "تم تطبيق الخصم" } : { ok: true, msg: `الكود مفعّل. الحد الأدنى للطلب ${money(S.coupon.minOrder)}` };
-  } catch { return { ok: false, msg: "تعذر التحقق من الكود" }; }
+  } catch (e) { return { ok: false, msg: e.status === 400 ? e.message : "تعذر التحقق من الكود" }; }
 }
 export function removeCoupon() { S.coupon = null; save("joo_coupon", null); emit(); }
 
@@ -123,7 +122,7 @@ function chrome() {
 
 /* ---------- Shared UI pieces ---------- */
 export function cardHTML(p, { feature = false } = {}) {
-  const off = discountPct(p), imgs = p.images || [], out = soldOut(p), w = feature ? 900 : 560;
+  const off = discountPct(p), imgs = p.images || [], out = soldOut(p), low = !out && p.stock != null && p.stock !== "" && Number(p.stock) <= 5, w = feature ? 900 : 560;
   const href = `product.html?id=${encodeURIComponent(p.id)}`;
   return `<article class="card${feature ? " feature" : ""}${out ? " sold" : ""}">
     <div class="pic">
@@ -132,9 +131,10 @@ export function cardHTML(p, { feature = false } = {}) {
         ${imgs[1] ? `<img src="${esc(img(imgs[1], w))}" alt="" loading="lazy">` : ""}
       </a>
       ${out ? `<span class="tag out">نفد</span>` : offerOf(p) ? `<span class="tag deal">اشترِ ${offerOf(p).buy} وادفع ${offerOf(p).pay}</span>` : off ? `<span class="tag">وفّر ${off}%</span>` : ""}
-      <button class="wish${isWished(p.id) ? " on" : ""}" data-wish="${p.id}" aria-label="المفضلة" aria-pressed="${isWished(p.id)}"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.600-7.500 10.200-7.500 10.200z"/></svg></button>
+      <button class="add" data-add="${esc(p.id)}" aria-label="أضف ${esc(p.name)} للسلة" ${out ? "disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="wish${isWished(p.id) ? " on" : ""}" data-wish="${esc(p.id)}" aria-label="المفضلة" aria-pressed="${isWished(p.id)}"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.600-7.500 10.200-7.500 10.200z"/></svg></button>
     </div>
-    <div class="info"><span class="cat">${esc(p.category || "")}</span><h3><a href="${href}">${esc(p.name)}</a></h3>${stars(p)}<div class="price"><b>${money(p.price)}</b>${off ? `<s>${money(p.oldPrice)}</s>` : ""}</div><button class="add" data-add="${p.id}" aria-label="أضف ${esc(p.name)} للسلة" ${out ? "disabled" : ""}>${out ? "غير متوفر" : "أضف للسلة"}</button></div>
+    <div class="info"><span class="cat">${esc(p.category || "")}</span><h3><a href="${href}">${esc(p.name)}</a></h3>${stars(p)}${low ? `<span class="low">باقي ${Number(p.stock)} بس</span>` : ""}<div class="price"><b>${money(p.price)}</b>${off ? `<s>${money(p.oldPrice)}</s>` : ""}</div></div>
   </article>`;
 }
 export const stars = (p) => (p.ratingCount > 0 ? `<span class="stars" aria-label="تقييم ${(p.ratingSum / p.ratingCount).toFixed(1)} من 5">★ ${(p.ratingSum / p.ratingCount).toFixed(1)} <small>(${p.ratingCount})</small></span>` : "");

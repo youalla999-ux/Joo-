@@ -33,7 +33,8 @@ onChange(() => {
   if (!built) {
     built = true;
     const c = load("joo_customer", {});
-    box.innerHTML = `<div class="cart-layout">
+    box.innerHTML = `<ol class="steps" aria-label="مراحل الطلب"><li class="done"><i>1</i><span>السلة</span></li><li class="now"><i>2</i><span>البيانات والدفع</span></li><li><i>3</i><span>التأكيد</span></li></ol>
+      <div class="cart-layout">
       <form class="form panel-form" id="coForm">
         <h2>بيانات التوصيل</h2>
         <label class="f">الاسم بالكامل<input name="name" required minlength="3" value="${esc(c.name || S.user?.displayName || "")}" autocomplete="name"></label>
@@ -47,18 +48,17 @@ onChange(() => {
         </div>
         <label class="f">العنوان بالتفصيل<textarea name="address" required minlength="8">${esc(c.address || "")}</textarea></label>
         <label class="f">ملاحظات (اختياري)<input name="notes"></label>
-        <input name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;inset-inline-start:-9999px;width:1px;height:1px;opacity:0">
         <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
         <div id="payBox"></div>
         <div class="msg err hidden" id="coErr"></div>
-        <button class="btn btn-primary btn-lg" id="coSubmit">تأكيد الطلب</button>
+        <div class="paybar"><div><small>الإجمالي</small><b id="coTotal"></b></div><button class="btn btn-primary btn-lg" id="coSubmit">تأكيد الطلب</button></div>
         <small class="muted">من غير حساب ولا تسجيل. الطلب بيوصلنا فورًا وتقدر تتابعه بكوده.</small>
       </form>
       <aside class="summary" id="sum"></aside></div>`;
     $("#coForm").addEventListener("submit", submit);
     $("#coForm [name=gov]").addEventListener("change", (e) => { S.gov = e.target.value; $("#sum").innerHTML = summary(); });
   }
-  $("#sum").innerHTML = summary();
+  $("#sum").innerHTML = summary(); { const t = $("#coTotal"); if (t) t.textContent = money(grandTotal()); }
   const pb = $("#payBox"); if (pb) { const cur = pb.querySelector("input:checked")?.value; const html = payHTML(cur); if (pb.dataset.h !== html) { pb.dataset.h = html; pb.innerHTML = html; } }
 });
 
@@ -68,12 +68,13 @@ async function submit(e) {
   const btn = $("#coSubmit"); btn.disabled = true; btn.textContent = "جاري إرسال الطلب...";
   S.gov = f.gov;
     const customer = { name: f.name.trim(), phone: f.phone.trim(), phone2: (f.phone2 || "").trim(), gov: f.gov, city: f.city.trim(), address: f.address.trim() };
+  let key; try { key = sessionStorage.getItem("joo_okey"); if (!key) { key = crypto.randomUUID(); sessionStorage.setItem("joo_okey", key); } } catch { key = crypto.randomUUID(); }
   try {
-    const r = await api("order", { items: lines.map((l) => ({ id: l.id, qty: l.qty })), customer, notes: (f.notes || "").trim(), payment: ["transfer", "card"].includes(f.payment) ? f.payment : "cod", coupon: S.coupon?.code || "", website: f.website || "" });
+    const r = await api("order", { key, items: lines.map((l) => ({ id: l.id, qty: l.qty })), customer, notes: (f.notes || "").trim(), payment: ["transfer", "card"].includes(f.payment) ? f.payment : "cod", coupon: S.coupon?.code || "", website: f.website || "" });
     try { localStorage.setItem("joo_customer", JSON.stringify(customer)); sessionStorage.setItem("joo_last", JSON.stringify({ code: r.code, pay: r.payment, total: r.total, name: r.name, phone: r.phone })); } catch {}
-    form.dataset.sent = "1"; clearCart();
-    if (r.payUrl) { location.href = r.payUrl; return; }
-    location.href = `thanks.html?c=${r.code}${r.payError ? "&pe=1" : ""}`;
+    form.dataset.sent = "1"; clearCart(); try { sessionStorage.removeItem("joo_okey"); } catch {}
+    if (r.payUrl && /^https:\/\/accept\.paymob\.com\//.test(r.payUrl)) { location.href = r.payUrl; return; }
+    location.href = r.payment === "transfer" ? `pay.html?c=${r.code}` : `thanks.html?c=${r.code}${r.payError ? "&pe=1" : ""}`;
   } catch (err) {
     console.error(err);
     const names = Object.fromEntries(lines.map((l) => [l.id, l.p.name]));
