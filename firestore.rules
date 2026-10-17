@@ -39,11 +39,18 @@ service cloud.firestore {
       allow create: if can('products') && validProduct(request.resource.data)
         && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
       allow update: if (
+        // اعتماد/حذف تقييم: عدّاد واحد فقط وبقيمة تقييم واحد (1..5) في المرة
         (can('reviews') && onlyChanged(['ratingSum', 'ratingCount'])
           && request.resource.data.ratingCount is int && request.resource.data.ratingCount >= 0
-          && request.resource.data.ratingSum is number && request.resource.data.ratingSum >= 0)
+          && request.resource.data.ratingCount - resource.data.get('ratingCount', 0) in [-1, 1]
+          && request.resource.data.ratingSum is number && request.resource.data.ratingSum >= 0
+          && request.resource.data.ratingSum - resource.data.get('ratingSum', 0) >= -5
+          && request.resource.data.ratingSum - resource.data.get('ratingSum', 0) <= 5)
+        // تعديل المنتج: لا يلمس التقييمات
         || (can('products') && validProduct(request.resource.data) && request.resource.data.updatedAt == request.time
-            && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)));
+            && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+            && request.resource.data.get('ratingSum', 0) == resource.data.get('ratingSum', 0)
+            && request.resource.data.get('ratingCount', 0) == resource.data.get('ratingCount', 0)));
       allow delete: if can('products');
     }
     function validProduct(d) {
@@ -87,9 +94,9 @@ service cloud.firestore {
         && num(d.get('returnDays', 14), 0, 365);
     }
 
+    // الكوبونات مش مقروءة للعامة: التحقق منها من الـ Worker (/api/coupon) فمفيش تخمين أو قراءة عدّادات.
     match /coupons/{code} {
-      allow get: if true;
-      allow list: if can('coupons');
+      allow get, list: if can('coupons');
       allow create, update: if can('coupons') && code.matches('^[A-Z0-9_-]{2,30}$') && validCoupon(request.resource.data);
       allow delete: if can('coupons');
     }
@@ -112,6 +119,7 @@ service cloud.firestore {
         && request.auth != null
         && request.resource.data.keys().hasOnly(['uid', 'at'])
         && request.resource.data.uid == request.auth.uid
+        && request.auth.token.email == 'jockermasr101@gmail.com'   // <-- بريد المالك الوحيد المسموح له يطلب ملكية المتجر (غيّره لو لزم)
         && existsAfter(/databases/$(database)/documents/admins/$(request.auth.uid));
       allow update, delete: if false;
     }
@@ -122,6 +130,7 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['email', 'role', 'createdAt'])
         && request.resource.data.role == 'owner'
+        && request.auth.token.email == 'jockermasr101@gmail.com'   // <-- نفس بريد المالك أعلاه
         && !exists(/databases/$(database)/documents/meta/bootstrap)
         && existsAfter(/databases/$(database)/documents/meta/bootstrap);
       allow create: if isOwner()
@@ -196,15 +205,8 @@ service cloud.firestore {
 
     match /reviews/{id} {
       allow read: if resource.data.approved == true || can('reviews');
-      allow create: if request.resource.data.keys().hasOnly(['productId', 'productName', 'name', 'rating', 'text', 'approved', 'createdAt'])
-        && request.resource.data.approved == false
-        && request.resource.data.productId is string
-        && exists(/databases/$(database)/documents/products/$(request.resource.data.productId))
-        && str(request.resource.data.productName, 0, 200)
-        && str(request.resource.data.name, 2, 60)
-        && str(request.resource.data.text, 1, 1000)
-        && request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
-        && request.resource.data.createdAt == request.time;
+      // التقييمات بتتسجل من الـ Worker (/api/review) بحد معدل وفلترة، وبتفضل مخفية لحد الاعتماد.
+      allow create: if false;
       allow update: if can('reviews') && onlyChanged(['approved']) && request.resource.data.approved is bool;
       allow delete: if can('reviews');
     }
